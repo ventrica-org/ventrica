@@ -1,0 +1,11 @@
+//
+//  default.xcconfig
+//  Ventrica
+//
+//  Created by samsam on 2/5/26.
+//
+
+AD_HOC_CODE_SIGNING_ALLOWED = YES
+
+DEPLOYMENT_LOCATION = YES
+DSTROOT = $(SRCROOT)/../_build/

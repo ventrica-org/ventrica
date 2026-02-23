@@ -1,0 +1,16 @@
+[package]
+name = "ventrica_cli"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "ven"
+path = "src/main.rs"
+
+[dependencies]
+ventricad = { path = "../ventricad" }
+clap = { version = "4.6", features = ["derive", "env"] }
+serde_json.workspace = true

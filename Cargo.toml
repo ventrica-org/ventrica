@@ -1,0 +1,27 @@
+[workspace]
+resolver = "3"
+members = ["ventrica", "ventrica_cli", "ventrica_ffi", "ventricad"]
+
+[workspace.package]
+edition = "2024"
+version = "0.0.1"
+authors = ["C <claration@riseup.net>"]
+license = "GPLv3"
+repository = "https://github.com/claration/Ventrica"
+
+[profile.release]
+codegen-units = 1
+debug = "full"
+lto = true
+opt-level = "z"
+panic = "abort"
+split-debuginfo = "packed"
+strip = true
+incremental = false
+
+[workspace.dependencies]
+log = "0.4"
+walkdir = "2.5"
+libc = "0.2"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }

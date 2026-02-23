@@ -1,0 +1,28 @@
+[package]
+name = "ventrica"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+log.workspace = true
+walkdir.workspace = true
+sha2 = "0.11"
+hex = "0.4"
+yaml-rust2 = "0.11"
+semver = "1.0"
+tempfile = "3.27"
+thiserror = "2.0"
+curl = "0.4"
+flate2 = "1.1"
+tar = "0.4"
+bzip2 = "0.6"
+xz2 = "0.1"
+lzma-rs = "0.3"
+rusqlite = { version = "0.32", features = ["bundled"] }
+rmp-serde = "1.3"

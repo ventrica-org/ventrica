@@ -1,0 +1,10 @@
+# build directories
+/target
+_build
+
+# Xcode specific
+*UserInterfaceState.xcuserstate
+xcuserdata/
+
+# Junk files
+*.DS_Store

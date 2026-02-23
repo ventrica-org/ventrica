@@ -1,0 +1,17 @@
+[package]
+name = "ventrica_ffi"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ventricad = { path = "../ventricad" }
+serde_json.workspace = true
+
+[build-dependencies]
+cbindgen = "0.29"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]

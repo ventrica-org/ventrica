@@ -1,0 +1,12 @@
+pub mod add_repo;
+pub mod build_repo;
+pub mod deps;
+pub mod gc;
+pub mod install;
+pub mod list;
+pub mod remove;
+pub mod repos;
+pub mod rollback;
+pub mod search;
+pub mod update;
+pub mod upgrade;
