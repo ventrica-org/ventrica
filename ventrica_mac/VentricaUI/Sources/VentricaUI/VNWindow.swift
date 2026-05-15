@@ -18,26 +18,15 @@ public class VNWindow: NSWindow {
 				.titled,
 				.closable,
 				.resizable,
+				.miniaturizable,
 				.fullSizeContentView,
-				.miniaturizable
 			],
-			backing: .buffered, defer: false
+			backing: .buffered,
+			defer: false,
 		)
 		
 		self.center()
 		self.title = title
 		self.contentViewController = contentViewController
-		self.delegate = self
-	}
-}
-
-// MARK: - NSWindowDelegate
-
-extension VNWindow: NSWindowDelegate {
-	public func window(
-		_ window: NSWindow,
-		willUseFullScreenPresentationOptions proposedOptions: NSApplication.PresentationOptions
-	) -> NSApplication.PresentationOptions {
-		[.autoHideToolbar, .autoHideMenuBar, .autoHideDock, .fullScreen]
 	}
 }

@@ -40,22 +40,23 @@ enum VNSidebarSection: CaseIterable {
 		}
 	}
 	
-	private var viewControllerType: VNViewController.Type {
+	func makeContentViewController() -> NSViewController {
 		switch self {
-		case .discover, .recents, .updates: VNViewController.self
-		case .sources: SourcesViewController.self
-		case .packages: PackageListViewController.self
+		case .discover, .recents, .updates:
+			let vc = NSViewController()
+			vc.title = self.title
+			return vc
+		case .sources:
+			let vc = SourcesViewController()
+			vc.title = self.title
+			return vc
+		case .packages:
+			let vc = PackageSplitViewController(
+				listController: PackageListViewController(titleText: self.title, url: nil)
+			)
+			vc.title = self.title
+			return vc
 		}
-	}
-	
-	func makeNavigationController() -> VNNavigationController {
-		let vc = viewControllerType.init(titleText: self.title)
-		return VNNavigationController(rootViewController: vc)
-	}
-	
-	func makeSplitViewController() -> PackageSplitViewController {
-		let vc = viewControllerType.init(titleText: self.title)
-		return PackageSplitViewController(listController: vc)
 	}
 }
 
@@ -68,8 +69,10 @@ final class VNSidebarViewController: NSViewController {
 	private var contentControllers: [VNSidebarSection: NSViewController] = [:]
 	private var _initialContentShown = false
 	
-	private lazy var searchNavigationController: VNNavigationController = {
-		VNNavigationController(rootViewController: VNViewController(titleText: .localized("Search")))
+	private lazy var _searchVC: NSViewController = {
+		let vc = NSViewController()
+		vc.title = .localized("Search")
+		return vc
 	}()
 	
 	private weak var mainSplitViewController: VNMainSplitViewController? {
@@ -79,11 +82,7 @@ final class VNSidebarViewController: NSViewController {
 	init() {
 		super.init(nibName: nil, bundle: nil)
 		for section in sections {
-			if section == .packages || section == .sources {
-				contentControllers[section] = section.makeSplitViewController()
-			} else {
-				contentControllers[section] = section.makeNavigationController()
-			}
+			contentControllers[section] = section.makeContentViewController()
 		}
 	}
 	
@@ -179,7 +178,7 @@ extension VNSidebarViewController: NSSearchFieldDelegate {
 			showContentController(contentControllers[section]!)
 		} else {
 			outlineView.deselectAll(nil)
-			showContentController(searchNavigationController)
+			showContentController(_searchVC)
 		}
 	}
 }

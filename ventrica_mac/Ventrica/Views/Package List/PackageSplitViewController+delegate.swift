@@ -11,28 +11,18 @@ import AppKit
 // MARK: - VNPackageSplitViewController: VNPackageSplitViewDelegate
 extension PackageSplitViewController: PackageSplitViewDelegate {
 	func viewController(didSelectPackage package: Package?) {
-		let vc: NSViewController!
-		
-		if let package {
-			let rootVc = PackageViewController(package: package)
-			vc = VNNavigationController(rootViewController: rootVc)
-		} else {
-			vc = NoPackageViewController()
-		}
-		
+		let vc: NSViewController = package.map { PackageViewController(package: $0) } ?? NoPackageViewController()
 		setDetailViewController(vc)
 	}
 	
-	func viewController(didSelectRepo package: Repo?) {
-		let vc: NSViewController!
-		
-		if let package {
-			let rootVc = PackageListViewController(titleText: package.name, url: package.url)
-			vc = VNNavigationController(rootViewController: rootVc)
+	func viewController(didSelectRepo repo: Repo?) {
+		let vc: NSViewController
+		if let repo {
+			let listVC = PackageListViewController(titleText: repo.name, url: repo.url)
+			vc = PackageSplitViewController(listController: listVC)
 		} else {
 			vc = NoPackageViewController()
 		}
-		
 		setDetailViewController(vc)
 	}
 }

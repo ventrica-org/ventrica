@@ -11,17 +11,28 @@ import VentricaUI
 import VentricaKit
 
 // MARK: - SourcesViewController
-final class SourcesViewController: VNViewController {
+final class SourcesViewController: NSViewController {
 	private let _scrollView = VNScrollView()
 	private var _repoData: [Repo] = []
-	
+
+	init() {
+		super.init(nibName: nil, bundle: nil)
+	}
+
+	@available(*, unavailable)
+	required init?(coder: NSCoder) { fatalError() }
+
 	override func loadView() {
-		super.loadView()
-		
+		view = NSView()
+
 		_setupScrollView()
 		_setupListeners()
-		observeScrollView(_scrollView)
-		navigationBar?.keepsTitleVisible = true
+	}
+
+	// MARK: - Toolbar action
+
+	@objc func addItem(_ sender: Any?) {
+		// TODO: implement add source
 	}
 	
 	private func _setupScrollView() {
@@ -46,6 +57,7 @@ final class SourcesViewController: VNViewController {
 			name: NSApplication.didBecomeActiveNotification,
 			object: nil
 		)
+		_load()
 	}
 	
 	@objc private func _load() {
@@ -121,9 +133,6 @@ extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 		
 		if let packageDelegate {
 			packageDelegate.viewController(didSelectRepo: repo)
-		} else {
-			let view = PackageListViewController(titleText: repo.name, url: repo.url)
-			navigationController?.pushViewController(view, animated: true)
 		}
 	}
 }

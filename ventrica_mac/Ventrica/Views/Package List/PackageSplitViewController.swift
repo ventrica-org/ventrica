@@ -10,15 +10,16 @@ import VentricaUI
 
 // MARK: - VNPackageSplitViewController
 final class PackageSplitViewController: NSSplitViewController {
-	private let _listController: VNNavigationController
+	private let _listController: NSViewController
 	private var _detailItem: NSSplitViewItem!
 	
-	init(listController: VNViewController) {
-		_listController = VNNavigationController(rootViewController: listController)
+	init(listController: NSViewController) {
+		_listController = listController
 		
 		super.init(nibName: nil, bundle: nil)
 		
-		listController.packageDelegate = self
+		(listController as? SourcesViewController)?.packageDelegate = self
+		(listController as? PackageListViewController)?.packageDelegate = self
 	}
 	
 	@available(*, unavailable)
@@ -42,6 +43,8 @@ final class PackageSplitViewController: NSSplitViewController {
 		splitView.dividerStyle = .thin
 	}
 	
+	var isSourcesList: Bool { _listController is SourcesViewController }
+
 	func setDetailViewController(_ controller: NSViewController) {
 		guard isViewLoaded else {
 			return
@@ -54,17 +57,24 @@ final class PackageSplitViewController: NSSplitViewController {
 		addSplitViewItem(newItem)
 		_detailItem = newItem
 	}
+	// MARK: - Toolbar: forward addItem to list VC if it handles it
+	@objc func addItem(_ sender: Any?) {
+		(_listController as? SourcesViewController)?.addItem(sender)
+	}
+
+	override func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+		if item.action == #selector(addItem(_:)) {
+			return _listController is SourcesViewController
+		}
+		return super.validateUserInterfaceItem(item)
+	}
 }
 
-private var delegateKey: UInt8 = 0
+private var _packageDelegateKey: UInt8 = 0
 
-extension VNViewController {
+extension NSViewController {
 	weak var packageDelegate: PackageSplitViewDelegate? {
-		get {
-			return objc_getAssociatedObject(self, &delegateKey) as? PackageSplitViewDelegate
-		}
-		set {
-			objc_setAssociatedObject(self, &delegateKey, newValue, .OBJC_ASSOCIATION_ASSIGN)
-		}
+		get { objc_getAssociatedObject(self, &_packageDelegateKey) as? PackageSplitViewDelegate }
+		set { objc_setAssociatedObject(self, &_packageDelegateKey, newValue, .OBJC_ASSOCIATION_ASSIGN) }
 	}
 }

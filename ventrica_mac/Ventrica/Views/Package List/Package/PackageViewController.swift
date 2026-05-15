@@ -13,7 +13,7 @@ private class _TopAlignedStackView: NSStackView {
 }
 
 // MARK: - VNPackageViewController
-final class PackageViewController: VNViewController {
+final class PackageViewController: NSViewController {
 	private let _scrollView = NSScrollView()
 	private let _stackView = _TopAlignedStackView()
 	
@@ -21,19 +21,17 @@ final class PackageViewController: VNViewController {
 	
 	init(package: Package) {
 		_package = package
-		super.init(titleText: package.name)
+		super.init(nibName: nil, bundle: nil)
+		self.title = package.name
 	}
-	
+
 	@available(*, unavailable)
-	required init(titleText: String) {
-		fatalError("init(coder:) has not been implemented")
-	}
+	required init?(coder: NSCoder) { fatalError() }
 	
-	override func loadView() {
-		super.loadView()
+	override func viewDidLoad() {
+		view = NSView()
 		_setupScrollView()
 		_setupStackView()
-		observeScrollView(_scrollView)
 		_addHeaderView()
 		_seperator()
 	}

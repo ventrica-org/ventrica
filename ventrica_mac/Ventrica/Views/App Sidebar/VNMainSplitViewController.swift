@@ -10,8 +10,11 @@ import VentricaUI
 
 final class VNMainSplitViewController: NSSplitViewController {
 	private let _container = ContentContainerViewController(
-		contentVC: VNSidebarSection.discover.makeNavigationController()
+		contentVC: VNSidebarSection.discover.makeContentViewController()
 	)
+
+	/// Called whenever the active content VC changes. Used by the window controller to rebuild toolbar items.
+	var onContentDidChange: ((NSViewController) -> Void)?
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -34,5 +37,7 @@ final class VNMainSplitViewController: NSSplitViewController {
 	func setContentViewController(_ controller: NSViewController) {
 		guard isViewLoaded else { return }
 		_container.swapContent(controller)
+		view.window?.title = controller.title ?? Bundle.main.name
+		onContentDidChange?(controller)
 	}
 }

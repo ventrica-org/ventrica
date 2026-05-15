@@ -17,7 +17,7 @@ protocol PackageSplitViewDelegate: AnyObject {
 }
 
 // MARK: - VNPackagesViewController
-final class PackageListViewController: VNViewController {
+final class PackageListViewController: NSViewController {
 	private let _scrollView = VNScrollView()
 	private var _packageData: [Package] = []
 	private var _url: String?
@@ -31,21 +31,19 @@ final class PackageListViewController: VNViewController {
 	
 	init(titleText: String, url: String?) {
 		self._url = url
-		super.init(titleText: titleText)
+		super.init(nibName: nil, bundle: nil)
+		self.title = titleText
 	}
 
-	required convenience init(titleText: String) {
-		self.init(titleText: titleText, url: nil)
-	}
+	@available(*, unavailable)
+	required init?(coder: NSCoder) { fatalError() }
 
 	
 	override func loadView() {
-		super.loadView()
+		view = NSView()
 		
 		_setupScrollView()
 		_setupListeners()
-		observeScrollView(_scrollView)
-		navigationBar?.keepsTitleVisible = true
 	}
 	
 	private func _setupScrollView() {
@@ -249,12 +247,7 @@ extension PackageListViewController: NSTableViewDataSource, NSTableViewDelegate 
 		}
 		
 		if case let .package(pkg) = _rows[selectedRow] {
-			if let packageDelegate {
-				packageDelegate.viewController(didSelectPackage: pkg)
-			} else {
-				let view = PackageViewController(package: pkg)
-				navigationController?.pushViewController(view, animated: true)
-			}
+			packageDelegate?.viewController(didSelectPackage: pkg)
 		}
 	}
 }
