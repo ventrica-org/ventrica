@@ -9,7 +9,7 @@ import AppKit
 import VentricaUI
 
 // MARK: - VNPackageSplitViewController
-final class VNPackageSplitViewController: NSSplitViewController {
+final class PackageSplitViewController: NSSplitViewController {
 	private let _listController: VNNavigationController
 	private var _detailItem: NSSplitViewItem!
 	
@@ -33,7 +33,7 @@ final class VNPackageSplitViewController: NSSplitViewController {
 		listItem.minimumThickness = 280
 		listItem.maximumThickness = 280
 		
-		_detailItem = NSSplitViewItem(viewController: VNNoPackageViewController())
+		_detailItem = NSSplitViewItem(viewController: NoPackageViewController())
 		_detailItem.minimumThickness = 400
 		
 		addSplitViewItem(listItem)
@@ -59,9 +59,9 @@ final class VNPackageSplitViewController: NSSplitViewController {
 private var delegateKey: UInt8 = 0
 
 extension VNViewController {
-	weak var packageDelegate: VNPackageSplitViewDelegate? {
+	weak var packageDelegate: PackageSplitViewDelegate? {
 		get {
-			return objc_getAssociatedObject(self, &delegateKey) as? VNPackageSplitViewDelegate
+			return objc_getAssociatedObject(self, &delegateKey) as? PackageSplitViewDelegate
 		}
 		set {
 			objc_setAssociatedObject(self, &delegateKey, newValue, .OBJC_ASSOCIATION_ASSIGN)

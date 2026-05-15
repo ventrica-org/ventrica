@@ -13,13 +13,13 @@ private class _TopAlignedStackView: NSStackView {
 }
 
 // MARK: - VNPackageViewController
-final class VNPackageViewController: VNViewController {
+final class PackageViewController: VNViewController {
 	private let _scrollView = NSScrollView()
 	private let _stackView = _TopAlignedStackView()
 	
-	private var _package: VNPackage
+	private var _package: Package
 	
-	init(package: VNPackage) {
+	init(package: Package) {
 		_package = package
 		super.init(titleText: package.name)
 	}
@@ -73,7 +73,7 @@ final class VNPackageViewController: VNViewController {
 	}
 	
 	private func _addHeaderView() {
-		let v = VNPackageHeaderView()
+		let v = PackageHeaderView()
 		v.configure(package: _package)
 		_addArrangedSubview(v)
 	}

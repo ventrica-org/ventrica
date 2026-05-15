@@ -7,7 +7,7 @@
 
 import VentricaKit
 
-struct VNRepo {
+struct Repo {
 	let name: String
 	let url: String
 	let addedAt: Int64

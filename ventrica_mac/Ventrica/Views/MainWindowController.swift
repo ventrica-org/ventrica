@@ -8,7 +8,7 @@
 import AppKit
 import VentricaUI
 
-final class VNMainWindowController: NSWindowController {
+final class MainWindowController: NSWindowController {
 	init() {
 		let window = VNWindow(
 			title: Bundle.main.name,

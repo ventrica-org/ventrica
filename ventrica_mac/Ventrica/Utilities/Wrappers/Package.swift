@@ -7,7 +7,7 @@
 
 import VentricaKit
 
-struct VNPackage {
+struct Package {
 	let name: String
 	let version: String
 	let description: String

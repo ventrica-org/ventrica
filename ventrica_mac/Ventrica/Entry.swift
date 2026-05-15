@@ -8,9 +8,11 @@
 import AppKit
 import VentricaKit
 
-@main enum VNEntry {
+@main enum Entry {
 	static func main() {
-		let delegate = VNAppDelegate()
+		_ = InstallQueue.shared
+		
+		let delegate = AppDelegate()
 		NSApplication.shared.delegate = delegate
 		_ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
 	}

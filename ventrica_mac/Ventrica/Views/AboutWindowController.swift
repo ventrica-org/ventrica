@@ -8,11 +8,11 @@
 import AppKit
 import VentricaUI
 
-final class VNAboutWindowController: NSWindowController {
+final class AboutWindowController: NSWindowController {
 	init() {
 		let window = VNWindow(
 			title: "About \(Bundle.main.name)",
-			contentViewController: VNAboutViewController()
+			contentViewController: AboutViewController()
 		)
 		
 		let size = NSSize(width: 270, height: 320)

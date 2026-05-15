@@ -5,6 +5,7 @@
 //  Created by samsam on 3/12/26.
 //
 
+import Foundation
 import MachO.dyld.utils
 
 extension Foundation.ProcessInfo {

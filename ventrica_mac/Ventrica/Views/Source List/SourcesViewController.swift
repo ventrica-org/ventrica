@@ -10,10 +10,10 @@ import Combine
 import VentricaUI
 import VentricaKit
 
-// MARK: - VNSourcesViewController
-final class VNSourcesViewController: VNViewController {
+// MARK: - SourcesViewController
+final class SourcesViewController: VNViewController {
 	private let _scrollView = VNScrollView()
-	private var _repoData: [VNRepo] = []
+	private var _repoData: [Repo] = []
 	
 	override func loadView() {
 		super.loadView()
@@ -49,7 +49,7 @@ final class VNSourcesViewController: VNViewController {
 	}
 	
 	@objc private func _load() {
-		var repos: [VNRepo] = []
+		var repos: [Repo] = []
 		
 		var err: OpaquePointer? = nil
 		
@@ -77,40 +77,18 @@ final class VNSourcesViewController: VNViewController {
 			defer { ventrica_repo_array_free(arr, UInt(count)) }
 			for i in 0..<count {
 				guard let repo = arr[i] else { continue }
-				repos.append(VNRepo(repo: repo.pointee))
-				
-				// Load and print packages for this repo.
-				//				let url = repo.pointee.url
-				//				var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepoPackage>?>? = nil
-				//				var pkgCount: Int = 0
-				//
-				//				if ventrica_list_repo_packages(store, url, &pkgArr, &pkgCount, &err) == 0,
-				//				   let pkgArr {
-				//					defer { ventrica_repo_package_array_free(pkgArr, UInt(pkgCount)) }
-				//					for j in 0..<pkgCount {
-				//						guard let pkg = pkgArr[j] else { continue }
-				//						let name    = String(cString: pkg.pointee.name)
-				//						let version = String(cString: pkg.pointee.version)
-				//						let desc    = String(cString: pkg.pointee.description)
-				//						print("  \(name) \(version) — \(desc)")
-				//					}
-				//				} else if let e = err {
-				//					print("Failed to load packages for \(String(cString: url!)): \(String(cString: ventrica_error_message(e)))")
-				//					ventrica_error_free(e)
-				//					err = nil
-				//				}
+				repos.append(Repo(repo: repo.pointee))
 			}
 		}
 		
 		_repoData = repos
 		_scrollView.tableView.reloadData()
-		
 	}
 }
 
 // MARK: - VNSourcesViewClikontroller & DataSource
 
-extension VNSourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
+extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
 		_repoData.count
 	}
@@ -144,14 +122,14 @@ extension VNSourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 		if let packageDelegate {
 			packageDelegate.viewController(didSelectRepo: repo)
 		} else {
-			let view = VNPackageListViewController(titleText: repo.name, url: repo.url)
+			let view = PackageListViewController(titleText: repo.name, url: repo.url)
 			navigationController?.pushViewController(view, animated: true)
 		}
 	}
 }
 
 extension VentricaUI.VNIconTableCellView {
-	func configure(repo: VNRepo) {
+	func configure(repo: Repo) {
 		nameLabel.stringValue = repo.name
 		descriptionLabel.stringValue = repo.url
 		iconView.image = VNCategoryIdentifier("sources").sectionIcon.image()

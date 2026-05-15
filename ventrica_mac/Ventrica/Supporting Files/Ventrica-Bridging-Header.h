@@ -3,4 +3,3 @@
 //
 
 #include "MobileGestalt.h"
-#include "QuartzCore.h"

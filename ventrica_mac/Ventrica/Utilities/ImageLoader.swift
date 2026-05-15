@@ -7,8 +7,8 @@
 
 import AppKit
 
-final class VNImageLoader {
-	@MainActor static let shared = VNImageLoader()
+final class ImageLoader {
+	@MainActor static let shared = ImageLoader()
 	
 	private let _memoryCache = NSCache<NSString, NSImage>()
 	private let _cacheDirectory: URL

@@ -6,31 +6,31 @@
 //
 
 import VentricaUI
+import AppKit
 
-#warning("VNViewController")
 // MARK: - VNPackageSplitViewController: VNPackageSplitViewDelegate
-extension VNPackageSplitViewController: VNPackageSplitViewDelegate {
-	func viewController(didSelectPackage package: VNPackage?) {
+extension PackageSplitViewController: PackageSplitViewDelegate {
+	func viewController(didSelectPackage package: Package?) {
 		let vc: NSViewController!
 		
 		if let package {
-			let rootVc = VNPackageViewController(package: package)
+			let rootVc = PackageViewController(package: package)
 			vc = VNNavigationController(rootViewController: rootVc)
 		} else {
-			vc = VNNoPackageViewController()
+			vc = NoPackageViewController()
 		}
 		
 		setDetailViewController(vc)
 	}
 	
-	func viewController(didSelectRepo package: VNRepo?) {
+	func viewController(didSelectRepo package: Repo?) {
 		let vc: NSViewController!
 		
 		if let package {
-			let rootVc = VNPackageListViewController(titleText: package.name, url: package.url)
+			let rootVc = PackageListViewController(titleText: package.name, url: package.url)
 			vc = VNNavigationController(rootViewController: rootVc)
 		} else {
-			vc = VNNoPackageViewController()
+			vc = NoPackageViewController()
 		}
 		
 		setDetailViewController(vc)

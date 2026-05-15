@@ -9,40 +9,30 @@ import AppKit
 import VentricaUI
 
 final class VNMainSplitViewController: NSSplitViewController {
-	private(set) var contentItem: NSSplitViewItem!
-	
+	private let _container = ContentContainerViewController(
+		contentVC: VNSidebarSection.discover.makeNavigationController()
+	)
+
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		
+
 		let sidebar = VNSidebarViewController()
 		let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
 		sidebarItem.minimumThickness = 220
 		sidebarItem.maximumThickness = 220
 		sidebarItem.canCollapse = false
 		sidebarItem.canCollapseFromWindowResize = true
-		
-		let initialVC = VNSidebarSection.discover.makeNavigationController()
-		contentItem = NSSplitViewItem(viewController: initialVC)
-		
+
+		let contentItem = NSSplitViewItem(viewController: _container)
+
 		addSplitViewItem(sidebarItem)
 		addSplitViewItem(contentItem)
-		
+
 		splitView.dividerStyle = .thin
 	}
-	
+
 	func setContentViewController(_ controller: NSViewController) {
-		guard
-			isViewLoaded,
-			contentItem.viewController !== controller
-		else {
-			return
-		}
-		
-		let newItem = NSSplitViewItem(viewController: controller)
-		
-		removeSplitViewItem(contentItem)
-		addSplitViewItem(newItem)
-		
-		contentItem = newItem
+		guard isViewLoaded else { return }
+		_container.swapContent(controller)
 	}
 }

@@ -8,9 +8,9 @@
 import AppKit
 import VentricaUI
 
-final class VNAppDelegate: NSObject, NSApplicationDelegate {
-	private var _mainWindowController: VNMainWindowController?
-	private var _aboutWindowController: VNAboutWindowController?
+final class AppDelegate: NSObject, NSApplicationDelegate {
+	private var _mainWindowController: MainWindowController?
+	private var _aboutWindowController: AboutWindowController?
 	
 	func applicationDidFinishLaunching(_ notification: Notification) {
 		_setupMainMenu()
@@ -46,24 +46,17 @@ final class VNAppDelegate: NSObject, NSApplicationDelegate {
 	
 	@objc private func _showMainWindow(_ sender: Any?) {
 		if _mainWindowController == nil {
-			_mainWindowController = VNMainWindowController()
+			_mainWindowController = MainWindowController()
 		}
 		
 		_mainWindowController?.showWindow(nil)
 		_mainWindowController?.window?.center()
 		NSApp.activate(ignoringOtherApps: true)
-		
-		#warning("do onboarding")
-//		if !UserDefaults.standard.bool(forKey: "VN.onboarding") {
-//			guard let vc = self._mainWindowController?.window?.contentViewController else { return }
-//			let onboardingVC = VNOnboardingViewController()
-//			vc.presentAsSheet(onboardingVC)
-//		}
 	}
 	
 	@objc private func _showAboutWindow(_ sender: Any?) {
 		if _aboutWindowController == nil {
-			_aboutWindowController = VNAboutWindowController()
+			_aboutWindowController = AboutWindowController()
 		}
 		
 		_aboutWindowController?.showWindow(nil)

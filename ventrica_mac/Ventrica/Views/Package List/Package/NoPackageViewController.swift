@@ -7,9 +7,7 @@
 
 import AppKit
 
-#warning("reuse")
-// MARK: - VNNoPackageSelectedViewController
-final class VNNoPackageViewController: NSViewController {
+final class NoPackageViewController: NSViewController {
 	override func loadView() {
 		view = NSView()
 		

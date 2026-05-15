@@ -6,11 +6,8 @@
 //
 
 import AppKit
-import VentricaUI
 
-#warning("Add sponsor credits, git commit info, other links (if it even goes well :))")
-
-final class VNAboutViewController: NSViewController {
+final class AboutViewController: NSViewController {
 	private let _iconSize: CGFloat = 95
 	
 	private let _viewBlur: NSVisualEffectView = {

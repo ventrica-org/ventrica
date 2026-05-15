@@ -11,20 +11,20 @@ import Combine
 import VentricaKit
 
 // MARK: - VNPackageSplitViewDelegate
-protocol VNPackageSplitViewDelegate: AnyObject {
-	func viewController(didSelectPackage package: VNPackage?)
-	func viewController(didSelectRepo package: VNRepo?)
+protocol PackageSplitViewDelegate: AnyObject {
+	func viewController(didSelectPackage package: Package?)
+	func viewController(didSelectRepo package: Repo?)
 }
 
 // MARK: - VNPackagesViewController
-final class VNPackageListViewController: VNViewController {
+final class PackageListViewController: VNViewController {
 	private let _scrollView = VNScrollView()
-	private var _packageData: [VNPackage] = []
+	private var _packageData: [Package] = []
 	private var _url: String?
 		
 	private enum RowItem {
 		case section(String)
-		case package(VNPackage)
+		case package(Package)
 	}
 	
 	private var _rows: [RowItem] = []
@@ -124,7 +124,7 @@ final class VNPackageListViewController: VNViewController {
 	}
 	
 	@objc private func _load() {
-		var packages: [VNPackage] = []
+		var packages: [Package] = []
 		var err: OpaquePointer? = nil
 		
 		guard let store = ventrica_store_open_default(&err) else {
@@ -161,7 +161,7 @@ final class VNPackageListViewController: VNViewController {
 				
 				for i in 0..<pkgCount {
 					guard let pkg = pkgArr[i] else { continue }
-					packages.append(VNPackage(repoPackage: pkg.pointee))
+					packages.append(Package(repoPackage: pkg.pointee))
 				}
 			}
 		} else {
@@ -184,7 +184,7 @@ final class VNPackageListViewController: VNViewController {
 				
 				for i in 0..<count {
 					guard let pkg = arr[i] else { continue }
-					packages.append(VNPackage(package: pkg.pointee))
+					packages.append(Package(package: pkg.pointee))
 				}
 			}
 		}
@@ -197,7 +197,7 @@ final class VNPackageListViewController: VNViewController {
 
 // MARK: - VNPackagesViewController & DataSource
 
-extension VNPackageListViewController: NSTableViewDataSource, NSTableViewDelegate {
+extension PackageListViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
 		_rows.count
 	}
@@ -252,7 +252,7 @@ extension VNPackageListViewController: NSTableViewDataSource, NSTableViewDelegat
 			if let packageDelegate {
 				packageDelegate.viewController(didSelectPackage: pkg)
 			} else {
-				let view = VNPackageViewController(package: pkg)
+				let view = PackageViewController(package: pkg)
 				navigationController?.pushViewController(view, animated: true)
 			}
 		}
@@ -260,7 +260,7 @@ extension VNPackageListViewController: NSTableViewDataSource, NSTableViewDelegat
 }
 
 extension VentricaUI.VNIconTableCellView {
-	func configure(package: VNPackage) {
+	func configure(package: Package) {
 		nameLabel.stringValue = package.name
 		descriptionLabel.stringValue = "\(package.version) • \(package.description)"
 		
@@ -268,7 +268,7 @@ extension VentricaUI.VNIconTableCellView {
 		
 		if let iconString = package.icon, let url = URL(string: iconString) {
 			Task {
-				if let image = await VNImageLoader.shared.load(url: url) {
+				if let image = await ImageLoader.shared.load(url: url) {
 					await MainActor.run {
 						self.iconView.image = image
 					}

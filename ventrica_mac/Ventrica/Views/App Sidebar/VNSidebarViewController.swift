@@ -43,8 +43,8 @@ enum VNSidebarSection: CaseIterable {
 	private var viewControllerType: VNViewController.Type {
 		switch self {
 		case .discover, .recents, .updates: VNViewController.self
-		case .sources: VNSourcesViewController.self
-		case .packages: VNPackageListViewController.self
+		case .sources: SourcesViewController.self
+		case .packages: PackageListViewController.self
 		}
 	}
 	
@@ -53,9 +53,9 @@ enum VNSidebarSection: CaseIterable {
 		return VNNavigationController(rootViewController: vc)
 	}
 	
-	func makeSplitViewController() -> VNPackageSplitViewController {
+	func makeSplitViewController() -> PackageSplitViewController {
 		let vc = viewControllerType.init(titleText: self.title)
-		return VNPackageSplitViewController(listController: vc)
+		return PackageSplitViewController(listController: vc)
 	}
 }
 
@@ -66,6 +66,7 @@ final class VNSidebarViewController: NSViewController {
 	
 	private let sections = VNSidebarSection.allCases
 	private var contentControllers: [VNSidebarSection: NSViewController] = [:]
+	private var _initialContentShown = false
 	
 	private lazy var searchNavigationController: VNNavigationController = {
 		VNNavigationController(rootViewController: VNViewController(titleText: .localized("Search")))
@@ -108,7 +109,10 @@ final class VNSidebarViewController: NSViewController {
 	override func viewDidAppear() {
 		super.viewDidAppear()
 		view.window?.makeFirstResponder(nil)
-		
+
+		guard !_initialContentShown else { return }
+		_initialContentShown = true
+
 		DispatchQueue.main.async { [weak self] in
 			guard let self = self else { return }
 			let initial = self.contentControllers[self.sections[0]]!
