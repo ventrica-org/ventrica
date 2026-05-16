@@ -23,7 +23,7 @@ final class VNMainSplitViewController: NSSplitViewController {
 		let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
 		sidebarItem.minimumThickness = 220
 		sidebarItem.maximumThickness = 220
-		sidebarItem.canCollapse = false
+		sidebarItem.canCollapse = true
 		sidebarItem.canCollapseFromWindowResize = true
 
 		let contentItem = NSSplitViewItem(viewController: _container)

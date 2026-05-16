@@ -32,7 +32,7 @@ final class PackageSplitViewController: NSSplitViewController {
 		
 		let listItem = NSSplitViewItem(viewController: _listController)
 		listItem.minimumThickness = 280
-		listItem.maximumThickness = 280
+		listItem.maximumThickness = 380
 		
 		_detailItem = NSSplitViewItem(viewController: NoPackageViewController())
 		_detailItem.minimumThickness = 400

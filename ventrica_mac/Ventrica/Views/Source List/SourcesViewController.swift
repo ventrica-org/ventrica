@@ -10,7 +10,6 @@ import Combine
 import VentricaUI
 import VentricaKit
 
-// MARK: - SourcesViewController
 final class SourcesViewController: NSViewController {
 	private let _scrollView = VNScrollView()
 	private var _repoData: [Repo] = []
@@ -29,11 +28,7 @@ final class SourcesViewController: NSViewController {
 		_setupListeners()
 	}
 
-	// MARK: - Toolbar action
-
-	@objc func addItem(_ sender: Any?) {
-		// TODO: implement add source
-	}
+	@objc func addItem(_ sender: Any?) {}
 	
 	private func _setupScrollView() {
 		_scrollView.tableView.delegate = self
@@ -97,8 +92,6 @@ final class SourcesViewController: NSViewController {
 		_scrollView.tableView.reloadData()
 	}
 }
-
-// MARK: - VNSourcesViewClikontroller & DataSource
 
 extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
