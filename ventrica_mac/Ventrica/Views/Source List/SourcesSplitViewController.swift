@@ -9,7 +9,7 @@ import AppKit
 import VentricaUI
 
 final class SourcesSplitViewController: VNSplitViewController {
-	private let _sourcesController = SourcesViewController()
+	private let _sourcesController = SourcesListViewController()
 	private let _noSourcesController: EmptyViewController = {
 		let v = EmptyViewController()
 		v.configure(
@@ -35,8 +35,8 @@ final class SourcesSplitViewController: VNSplitViewController {
 	}
 }
 
-extension SourcesSplitViewController: SourcesViewControllerDelegate {
-	func sourcesViewController(_ vc: SourcesViewController, didSelect repo: Repo?) {
+extension SourcesSplitViewController: SourcesListViewControllerDelegate {
+	func sourcesViewController(_ vc: SourcesListViewController, didSelect repo: Repo?) {
 		if let repo {
 			setDetailViewController(PackagesSplitViewController(titleText: repo.name, url: repo.url))
 		} else {

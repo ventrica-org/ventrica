@@ -10,30 +10,30 @@ import Combine
 import VentricaUI
 import VentricaKit
 
-protocol SourcesViewControllerDelegate: AnyObject {
-	func sourcesViewController(_ vc: SourcesViewController, didSelect repo: Repo?)
+protocol SourcesListViewControllerDelegate: AnyObject {
+	func sourcesViewController(_ vc: SourcesListViewController, didSelect repo: Repo?)
 }
 
-final class SourcesViewController: NSViewController {
-	weak var delegate: SourcesViewControllerDelegate?
-
+final class SourcesListViewController: NSViewController {
+	weak var delegate: SourcesListViewControllerDelegate?
+	
 	private let _scrollView = VNScrollView()
 	private var _repoData: [Repo] = []
-
+	
 	init() {
 		super.init(nibName: nil, bundle: nil)
 	}
-
+	
 	@available(*, unavailable)
 	required init?(coder: NSCoder) { fatalError() }
-
+	
 	override func loadView() {
-		view = NSView()
-
+		view = .init()
+		
 		_setupScrollView()
 		_setupListeners()
 	}
-
+	
 	@objc func addItem(_ sender: Any?) {}
 	
 	private func _setupScrollView() {
@@ -53,11 +53,11 @@ final class SourcesViewController: NSViewController {
 	
 	private func _setupListeners() {
 		_load()
-		NotificationCenter.default.addObserver(
-			self,
-			selector: #selector(_load),
-			name: NSApplication.didBecomeActiveNotification,
-			object: nil
+		
+		NotificationCenter.default.addObservers(
+			[NSApplication.didBecomeActiveNotification, .shouldRefreshSourcesList],
+			observer: self,
+			selector: #selector(_load)
 		)
 	}
 	
@@ -99,7 +99,7 @@ final class SourcesViewController: NSViewController {
 	}
 }
 
-extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
+extension SourcesListViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
 		_repoData.count
 	}
@@ -122,12 +122,12 @@ extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 	
 	func tableViewSelectionDidChange(_ notification: Notification) {
 		let selectedRow = _scrollView.tableView.selectedRow
-
+		
 		guard selectedRow >= 0 else {
 			delegate?.sourcesViewController(self, didSelect: nil)
 			return
 		}
-
+		
 		let repo = _repoData[selectedRow]
 		delegate?.sourcesViewController(self, didSelect: repo)
 	}

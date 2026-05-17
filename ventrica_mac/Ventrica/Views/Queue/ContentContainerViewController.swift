@@ -76,7 +76,7 @@ final class ContentContainerViewController: NSViewController {
 		])
 		
 		_queueBarObserver = NotificationCenter.default.addObserver(
-			forName: InstallQueue.didChange,
+			forName: .queueDidChange,
 			object: nil,
 			queue: .main
 		) { [weak self] _ in

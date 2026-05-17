@@ -48,9 +48,6 @@ final class PackageHeaderView: NSView {
 		return v
 	}()
 	
-	private let _getButton = VNPillButton()
-	private var _queueObserver: Any?
-	
 	private lazy var _textStack: NSStackView = {
 		let v = NSStackView(views: [_nameLabel, _descriptionLabel, _spacer, _getButton])
 		v.orientation = .vertical
@@ -59,23 +56,17 @@ final class PackageHeaderView: NSView {
 		return v
 	}()
 	
+	private let _getButton = VNPillButton()
+	private var _queueObserver: Any?
+	
 	override init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
-		_setup()
-	}
-	
-	@available(*, unavailable)
-	required public init?(coder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
-	}
-	
-	private func _setup() {
+		
 		[_iconView, _textStack].forEach {
 			addSubview($0)
 			$0.translatesAutoresizingMaskIntoConstraints = false
 		}
 		
-		// so it hugs if theres no space for it
 		_nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 		_descriptionLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 		
@@ -93,6 +84,11 @@ final class PackageHeaderView: NSView {
 		])
 	}
 	
+	@available(*, unavailable)
+	required public init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+	
 	func configure(package: Package) {
 		_nameLabel.stringValue = package.name
 		_descriptionLabel.stringValue = package.description
@@ -104,13 +100,13 @@ final class PackageHeaderView: NSView {
 				await MainActor.run { self._iconView.image = image }
 			}
 		}
-
+		
 		_syncButtonState(for: package)
-
+		
 		if let obs = _queueObserver { NotificationCenter.default.removeObserver(obs) }
 		let packageName = package.name
 		_queueObserver = NotificationCenter.default.addObserver(
-			forName: InstallQueue.didChange,
+			forName: .queueDidChange,
 			object: nil,
 			queue: .main
 		) { [weak self] _ in
@@ -119,7 +115,7 @@ final class PackageHeaderView: NSView {
 				self._syncButtonStateForName(packageName)
 			}
 		}
-
+		
 		_getButton.onTap = { [weak self] in
 			guard let self else { return }
 			switch self._getButton.buttonState {
@@ -132,11 +128,11 @@ final class PackageHeaderView: NSView {
 			}
 		}
 	}
-
+	
 	private func _syncButtonState(for package: Package) {
 		_syncButtonStateForName(package.name)
 	}
-
+	
 	private func _syncButtonStateForName(_ name: String) {
 		let queue = InstallQueue.shared
 		if queue.isQueuedForUninstall(name) {
@@ -149,26 +145,6 @@ final class PackageHeaderView: NSView {
 			_getButton.buttonState = .get
 		}
 	}
-	
-	fileprivate func configure() {
-		_nameLabel.stringValue =  "uikittools-ng"
-		_descriptionLabel.stringValue = "Next-gen uikittools for iOS 11+ (though probably will work on 9+)"
-		_iconView.image = VNCategoryIdentifier("developer").sectionIcon.image()
-	}
-}
-
-#Preview(PackageHeaderView.className()) {
-	struct Preview: NSViewRepresentable {
-		func makeNSView(context: Context) -> NSView {
-			let cell = PackageHeaderView()
-			cell.configure()
-			return cell
-		}
-		
-		func updateNSView(_ nsView: NSView, context: Context) {}
-	}
-	
-	return Preview()
 }
 
 final class VNPillButton: NSButton {
@@ -178,21 +154,21 @@ final class VNPillButton: NSButton {
 		case installed
 		case uninstallQueued
 	}
-
+	
 	var buttonState: State = .get {
 		didSet { _refresh() }
 	}
-
+	
 	var onTap: (() -> Void)?
-
+	
 	override init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
 		_configure()
 	}
-
+	
 	@available(*, unavailable)
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
+	
 	private func _configure() {
 		isBordered = false
 		wantsLayer = true
@@ -201,7 +177,7 @@ final class VNPillButton: NSButton {
 		action = #selector(_buttonTapped)
 		_refresh()
 	}
-
+	
 	private func _refresh() {
 		effectiveAppearance.performAsCurrentDrawingAppearance {
 			switch self.buttonState {
@@ -248,24 +224,24 @@ final class VNPillButton: NSButton {
 			}
 		}
 	}
-
+	
 	@objc private func _buttonTapped() {
 		guard buttonState == .get || buttonState == .installed else { return }
 		onTap?()
 	}
-
+	
 	override var intrinsicContentSize: NSSize { NSSize(width: 90, height: 30) }
-
+	
 	override func layout() {
 		super.layout()
 		layer?.cornerRadius = bounds.height / 2
 	}
-
+	
 	override func viewDidChangeEffectiveAppearance() {
 		super.viewDidChangeEffectiveAppearance()
 		_refresh()
 	}
-
+	
 	override func mouseDown(with event: NSEvent) {
 		guard buttonState == .get || buttonState == .installed else { return }
 		NSAnimationContext.runAnimationGroup { ctx in

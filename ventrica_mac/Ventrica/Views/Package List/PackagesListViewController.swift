@@ -38,7 +38,7 @@ final class PackagesListViewController: NSViewController {
 	required init?(coder: NSCoder) { fatalError() }
 	
 	override func loadView() {
-		view = NSView()
+		view = .init()
 		
 		_setupScrollView()
 		_setupListeners()
@@ -109,11 +109,11 @@ final class PackagesListViewController: NSViewController {
 	
 	private func _setupListeners() {
 		_load()
-		NotificationCenter.default.addObserver(
-			self,
-			selector: #selector(_load),
-			name: NSApplication.didBecomeActiveNotification,
-			object: nil
+		
+		NotificationCenter.default.addObservers(
+			[NSApplication.didBecomeActiveNotification, .shouldRefreshPackageList],
+			observer: self,
+			selector: #selector(_load)
 		)
 	}
 	

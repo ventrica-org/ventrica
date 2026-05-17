@@ -220,7 +220,7 @@ final class QueueBarView: NSView {
 		NotificationCenter.default.addObserver(
 			self,
 			selector: #selector(_refresh),
-			name: InstallQueue.didChange,
+			name: .queueDidChange,
 			object: nil
 		)
 	}
