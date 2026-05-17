@@ -59,7 +59,7 @@ final class MainWindowController: NSWindowController {
 			return [.toggleSidebar, .mainSeparator]
 		}
 		if pkgSplit.isSourcesList {
-			return [.toggleSidebar, .mainSeparator, .addItem, .flexibleSpace, .innerSeparator]
+			return [.toggleSidebar, .mainSeparator, .addItem, .innerSeparator]
 		} else {
 			return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator]
 		}

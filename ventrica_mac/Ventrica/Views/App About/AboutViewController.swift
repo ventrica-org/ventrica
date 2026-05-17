@@ -51,11 +51,6 @@ final class AboutViewController: NSViewController {
 	}()
 	
 	override func loadView() {
-		super.loadView()
-		_setupView()
-	}
-	
-	private func _setupView() {
 		[_appIconView, _nameLabel, _versionLabel].forEach {
 			_contentStack.addArrangedSubview($0)
 		}
