@@ -7,7 +7,7 @@
 
 import AppKit
 
-final class NoPackageViewController: NSViewController {
+final public class EmptyViewController: NSViewController {
 	private let _shippingImageView: NSImageView = {
 		let v = NSImageView(image: NSImage(
 			systemSymbolName: "shippingbox",
@@ -18,15 +18,15 @@ final class NoPackageViewController: NSViewController {
 		return v
 	}()
 	
-	private let _titleLabel: NSTextField = {
-		let v = NSTextField(labelWithString: "No Package Selected")
+	private var _titleLabel: NSTextField = {
+		let v = NSTextField(labelWithString: "")
 		v.font = .systemFont(ofSize: 17, weight: .medium)
 		v.textColor = .secondaryLabelColor
 		return v
 	}()
 	
-	private let _subtitleLabel: NSTextField = {
-		let v = NSTextField(labelWithString: "Select a package from the list to see its details.")
+	private var _subtitleLabel: NSTextField = {
+		let v = NSTextField(labelWithString: "")
 		v.font = .systemFont(ofSize: 13)
 		v.textColor = .tertiaryLabelColor
 		return v
@@ -41,7 +41,7 @@ final class NoPackageViewController: NSViewController {
 		return v
 	}()
 	
-	override func loadView() {
+	public override func loadView() {
 		view = .init()
 		view.addSubview(_contentStack)
 		
@@ -49,5 +49,10 @@ final class NoPackageViewController: NSViewController {
 			_contentStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 			_contentStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 		])
+	}
+	
+	public func configure(title: String, subtitle: String) {
+		_titleLabel.stringValue = title
+		_subtitleLabel.stringValue = subtitle
 	}
 }

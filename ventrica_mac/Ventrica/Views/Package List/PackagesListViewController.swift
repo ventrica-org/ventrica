@@ -10,14 +10,13 @@ import VentricaUI
 import Combine
 import VentricaKit
 
-// MARK: - VNPackageSplitViewDelegate
-protocol PackageSplitViewDelegate: AnyObject {
-	func viewController(didSelectPackage package: Package?)
-	func viewController(didSelectRepo package: Repo?)
+protocol PackagesListViewControllerDelegate: AnyObject {
+	func packageListViewController(_ vc: PackagesListViewController, didSelect package: Package?)
 }
 
-// MARK: - VNPackagesViewController
-final class PackageListViewController: NSViewController {
+final class PackagesListViewController: NSViewController {
+	weak var delegate: PackagesListViewControllerDelegate?
+
 	private let _scrollView = VNScrollView()
 	private var _packageData: [Package] = []
 	private var _url: String?
@@ -192,7 +191,7 @@ final class PackageListViewController: NSViewController {
 
 // MARK: - VNPackagesViewController & DataSource
 
-extension PackageListViewController: NSTableViewDataSource, NSTableViewDelegate {
+extension PackagesListViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
 		_rows.count
 	}
@@ -238,12 +237,12 @@ extension PackageListViewController: NSTableViewDataSource, NSTableViewDelegate 
 		let selectedRow = _scrollView.tableView.selectedRow
 		
 		guard selectedRow >= 0 else {
-			packageDelegate?.viewController(didSelectPackage: nil)
+			delegate?.packageListViewController(self, didSelect: nil)
 			return
 		}
-		
+
 		if case let .package(pkg) = _rows[selectedRow] {
-			packageDelegate?.viewController(didSelectPackage: pkg)
+			delegate?.packageListViewController(self, didSelect: pkg)
 		}
 	}
 }

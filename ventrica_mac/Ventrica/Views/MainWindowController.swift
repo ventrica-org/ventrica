@@ -48,7 +48,7 @@ final class MainWindowController: NSWindowController {
 	}
 	
 	private func _toolbarIdentifiers() -> [NSToolbarItem.Identifier] {
-		guard let pkgSplit = _currentContentVC as? PackageSplitViewController else {
+		guard _currentContentVC is VNSplitViewController else {
 			return [.toggleSidebar, .mainSeparator]
 		}
 		return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator]
@@ -94,10 +94,10 @@ extension MainWindowController: NSToolbarDelegate {
 				dividerIndex: 0
 			)
 		case .innerSeparator:
-			guard let pkgSplit = _currentContentVC as? PackageSplitViewController else { return nil }
+			guard let split = _currentContentVC as? VNSplitViewController else { return nil }
 			return NSTrackingSeparatorToolbarItem(
 				identifier: itemIdentifier,
-				splitView: pkgSplit.splitView,
+				splitView: split.splitView,
 				dividerIndex: 0
 			)
 		default:

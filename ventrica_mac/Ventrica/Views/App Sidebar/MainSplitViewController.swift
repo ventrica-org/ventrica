@@ -38,13 +38,11 @@ enum SidebarSection: CaseIterable {
 			vc.title = self.title
 			return vc
 		case .sources:
-			let vc = PackageSplitViewController(listController: SourcesViewController())
+			let vc = SourcesSplitViewController()
 			vc.title = self.title
 			return vc
 		case .packages:
-			let vc = PackageSplitViewController(
-				listController: PackageListViewController(titleText: self.title, url: nil)
-			)
+			let vc = PackagesSplitViewController(titleText: self.title, url: nil)
 			vc.title = self.title
 			return vc
 		}

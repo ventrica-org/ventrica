@@ -10,7 +10,13 @@ import Combine
 import VentricaUI
 import VentricaKit
 
+protocol SourcesViewControllerDelegate: AnyObject {
+	func sourcesViewController(_ vc: SourcesViewController, didSelect repo: Repo?)
+}
+
 final class SourcesViewController: NSViewController {
+	weak var delegate: SourcesViewControllerDelegate?
+
 	private let _scrollView = VNScrollView()
 	private var _repoData: [Repo] = []
 
@@ -116,17 +122,14 @@ extension SourcesViewController: NSTableViewDataSource, NSTableViewDelegate {
 	
 	func tableViewSelectionDidChange(_ notification: Notification) {
 		let selectedRow = _scrollView.tableView.selectedRow
-		
+
 		guard selectedRow >= 0 else {
-			packageDelegate?.viewController(didSelectPackage: nil)
+			delegate?.sourcesViewController(self, didSelect: nil)
 			return
 		}
-		
+
 		let repo = _repoData[selectedRow]
-		
-		if let packageDelegate {
-			packageDelegate.viewController(didSelectRepo: repo)
-		}
+		delegate?.sourcesViewController(self, didSelect: repo)
 	}
 }
 
