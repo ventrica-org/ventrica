@@ -52,13 +52,13 @@ final class SourcesViewController: NSViewController {
 	}
 	
 	private func _setupListeners() {
+		_load()
 		NotificationCenter.default.addObserver(
 			self,
 			selector: #selector(_load),
 			name: NSApplication.didBecomeActiveNotification,
 			object: nil
 		)
-		_load()
 	}
 	
 	@objc private func _load() {
