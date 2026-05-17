@@ -23,7 +23,7 @@ enum VNSidebarSection: CaseIterable {
 	var title: String {
 		switch self {
 		case .discover: .localized("Discover")
-		case .recents:  .localized("Recents")
+		case .recents:  .localized("News")
 		case .sources:  .localized("Sources")
 		case .packages: .localized("Packages")
 		case .updates:  .localized("Updates")
@@ -33,7 +33,7 @@ enum VNSidebarSection: CaseIterable {
 	var symbol: String {
 		switch self {
 		case .discover: "star"
-		case .recents:  "clock"
+		case .recents:  "text.book.closed"
 		case .sources: 	"globe.desk"
 		case .packages: "shippingbox"
 		case .updates:  "square.and.arrow.down"
@@ -47,7 +47,9 @@ enum VNSidebarSection: CaseIterable {
 			vc.title = self.title
 			return vc
 		case .sources:
-			let vc = SourcesViewController()
+			let vc = PackageSplitViewController(
+				listController: SourcesViewController()
+			)
 			vc.title = self.title
 			return vc
 		case .packages:
