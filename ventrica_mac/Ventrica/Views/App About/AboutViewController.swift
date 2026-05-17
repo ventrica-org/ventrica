@@ -42,8 +42,8 @@ final class AboutViewController: NSViewController {
 		return v
 	}()
 	
-	private let _contentStack: NSStackView = {
-		let v = NSStackView()
+	private lazy var _contentStack: NSStackView = {
+		let v = NSStackView(views: [_appIconView, _nameLabel, _versionLabel])
 		v.orientation = .vertical
 		v.alignment = .centerX
 		v.spacing = 10
@@ -51,11 +51,7 @@ final class AboutViewController: NSViewController {
 	}()
 	
 	override func loadView() {
-		[_appIconView, _nameLabel, _versionLabel].forEach {
-			_contentStack.addArrangedSubview($0)
-		}
-		
-		[_viewBlur, _appIconView, _nameLabel, _versionLabel, _contentStack].forEach {
+		[_viewBlur, _contentStack].forEach {
 			$0.translatesAutoresizingMaskIntoConstraints = false
 		}
 		

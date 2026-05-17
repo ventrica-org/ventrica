@@ -20,15 +20,7 @@ public class VNSectionTableCellView: NSTableCellView {
 	
 	override init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
-		_setup()
-	}
-	
-	@available(*, unavailable)
-	required public init?(coder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
-	}
-	
-	private func _setup() {
+		
 		_titleLabel.translatesAutoresizingMaskIntoConstraints = false
 		addSubview(_titleLabel)
 		
@@ -38,23 +30,12 @@ public class VNSectionTableCellView: NSTableCellView {
 		])
 	}
 	
+	@available(*, unavailable)
+	required public init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+	
 	public func configure(title: String) {
 		_titleLabel.stringValue = title
 	}
-}
-
-// MARK: - Preview
-
-#Preview(VNSectionTableCellView.className()) {
-	struct Preview: NSViewRepresentable {
-		func makeNSView(context: Context) -> NSView {
-			let cell = VNSectionTableCellView()
-			cell.configure(title: "Foo")
-			return cell
-		}
-		
-		func updateNSView(_ nsView: NSView, context: Context) {}
-	}
-
-	return Preview()
 }

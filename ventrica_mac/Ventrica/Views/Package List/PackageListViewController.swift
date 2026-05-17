@@ -21,7 +21,7 @@ final class PackageListViewController: NSViewController {
 	private let _scrollView = VNScrollView()
 	private var _packageData: [Package] = []
 	private var _url: String?
-		
+	
 	private enum RowItem {
 		case section(String)
 		case package(Package)
@@ -34,10 +34,9 @@ final class PackageListViewController: NSViewController {
 		super.init(nibName: nil, bundle: nil)
 		self.title = titleText
 	}
-
+	
 	@available(*, unavailable)
 	required init?(coder: NSCoder) { fatalError() }
-
 	
 	override func loadView() {
 		view = NSView()
@@ -137,7 +136,7 @@ final class PackageListViewController: NSViewController {
 		defer {
 			ventrica_store_close(store)
 		}
-
+		
 		if let url = _url {
 			print(url)
 			var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepoPackage>?>? = nil
@@ -242,7 +241,6 @@ extension PackageListViewController: NSTableViewDataSource, NSTableViewDelegate 
 		
 		guard selectedRow >= 0 else {
 			packageDelegate?.viewController(didSelectPackage: nil)
-			
 			return
 		}
 		

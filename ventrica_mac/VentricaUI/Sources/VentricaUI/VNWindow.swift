@@ -25,7 +25,7 @@ public class VNWindow: NSWindow {
 			defer: false,
 		)
 		
-		self.center()
+		center()
 		self.title = title
 		self.contentViewController = contentViewController
 	}

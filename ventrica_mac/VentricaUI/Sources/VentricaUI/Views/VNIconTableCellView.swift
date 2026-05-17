@@ -51,15 +51,7 @@ public class VNIconTableCellView: NSTableCellView {
 	
 	override init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
-		_setup()
-	}
-	
-	@available(*, unavailable)
-	required public init?(coder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
-	}
-	
-	private func _setup() {
+		
 		[nameLabel, descriptionLabel].forEach {
 			textStack.addArrangedSubview($0)
 		}
@@ -81,38 +73,8 @@ public class VNIconTableCellView: NSTableCellView {
 		])
 	}
 	
-	internal func configure(title: String, description: String, icon: NSImage?) {
-		nameLabel.stringValue = title
-		descriptionLabel.stringValue = description
-		iconView.image = icon
-	}
-}
-
-// MARK: - Preview
-
-#Preview(VNIconTableCellView.className()) {
-	struct Preview: NSViewRepresentable {
-		func makeNSView(context: Context) -> NSView {
-			let cell = VNIconTableCellView()
-			cell.configure(
-				title: "Foo",
-				description: "0.0.0 • Foo",
-				icon: VNCategoryIdentifier("sources").sectionIcon.image()!
-			)
-			return cell
-		}
-		
-		func updateNSView(_ nsView: NSView, context: Context) {}
-	}
-
-	return HStack {
-		List {
-			Group {
-				ForEach(0..<3) { _ in
-					Preview()
-				}
-			}
-			.frame(height: 44)
-		}
+	@available(*, unavailable)
+	required public init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
 	}
 }
