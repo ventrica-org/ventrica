@@ -41,8 +41,8 @@ public class VNIconTableCellView: NSTableCellView {
 		return v
 	}()
 	
-	public let textStack: NSStackView = {
-		let v = NSStackView()
+	public lazy var textStack: NSStackView = {
+		let v = NSStackView(views: [nameLabel, descriptionLabel])
 		v.orientation = .vertical
 		v.alignment = .leading
 		v.spacing = 2
@@ -51,10 +51,6 @@ public class VNIconTableCellView: NSTableCellView {
 	
 	override init(frame frameRect: NSRect) {
 		super.init(frame: frameRect)
-		
-		[nameLabel, descriptionLabel].forEach {
-			textStack.addArrangedSubview($0)
-		}
 		
 		[iconView, textStack].forEach {
 			addSubview($0)

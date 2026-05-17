@@ -92,13 +92,6 @@ final class MainSplitViewController: NSSplitViewController {
 	}()
 	
 	private var contentControllers: [SidebarSection: NSViewController] = [:]
-	private var initialContentShown = false
-	
-	private lazy var searchVC: NSViewController = {
-		let v = NSViewController()
-		v.title = .localized("Search")
-		return v
-	}()
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -150,19 +143,6 @@ final class MainSplitViewController: NSSplitViewController {
 		_sidebarOutlineView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
 	}
 	
-	override func viewDidAppear() {
-		super.viewDidAppear()
-		view.window?.makeFirstResponder(nil)
-		
-		guard !initialContentShown else { return }
-		initialContentShown = true
-		
-		DispatchQueue.main.async { [weak self] in
-			guard let self = self else { return }
-			self.showContentController(self.contentControllers[SidebarSection.allCases[0]]!)
-		}
-	}
-	
 	private func showContentController(_ controller: NSViewController) {
 		_container.swapContent(controller)
 		view.window?.title = controller.title ?? Bundle.main.name
@@ -191,10 +171,10 @@ extension MainSplitViewController: NSOutlineViewDataSource, NSOutlineViewDelegat
 		guard let section = item as? SidebarSection else {
 			return nil
 		}
-
+		
 		let cell = MainSplitViewCellView()
 		cell.configure(with: section)
-
+		
 		return cell
 	}
 	
@@ -219,7 +199,7 @@ extension MainSplitViewController: NSSearchFieldDelegate {
 			showContentController(contentControllers[SidebarSection.allCases[row]]!)
 		} else {
 			_sidebarOutlineView.deselectAll(nil)
-			showContentController(searchVC)
+			fatalError("not yet implemented")
 		}
 	}
 }

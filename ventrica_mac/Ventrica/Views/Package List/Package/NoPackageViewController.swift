@@ -32,23 +32,16 @@ final class NoPackageViewController: NSViewController {
 		return v
 	}()
 	
-	private let _contentStack: NSStackView = {
-		let v = NSStackView()
+	private lazy var _contentStack: NSStackView = {
+		let v = NSStackView(views: [_shippingImageView, _titleLabel, _subtitleLabel])
 		v.orientation = .vertical
 		v.alignment = .centerX
 		v.spacing = 13
+		v.translatesAutoresizingMaskIntoConstraints = false
 		return v
 	}()
 	
 	override func loadView() {
-		[_shippingImageView, _titleLabel, _subtitleLabel].forEach {
-			_contentStack.addArrangedSubview($0)
-		}
-		
-		[_shippingImageView, _titleLabel, _subtitleLabel, _contentStack].forEach {
-			$0.translatesAutoresizingMaskIntoConstraints = false
-		}
-		
 		view = .init()
 		view.addSubview(_contentStack)
 		

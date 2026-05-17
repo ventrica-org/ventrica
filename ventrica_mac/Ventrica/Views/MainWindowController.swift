@@ -51,11 +51,7 @@ final class MainWindowController: NSWindowController {
 		guard let pkgSplit = _currentContentVC as? PackageSplitViewController else {
 			return [.toggleSidebar, .mainSeparator]
 		}
-		if pkgSplit.isSourcesList {
-			return [.toggleSidebar, .mainSeparator, .addItem, .innerSeparator]
-		} else {
-			return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator]
-		}
+		return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator]
 	}
 	
 	private func _rebuildToolbar() {
@@ -82,7 +78,7 @@ extension MainWindowController: NSToolbarDelegate {
 	}
 	
 	func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-		[.toggleSidebar, .flexibleSpace, .mainSeparator, .innerSeparator, .addItem]
+		[.toggleSidebar, .flexibleSpace, .mainSeparator, .innerSeparator]
 	}
 	
 	func toolbar(
@@ -104,12 +100,6 @@ extension MainWindowController: NSToolbarDelegate {
 				splitView: pkgSplit.splitView,
 				dividerIndex: 0
 			)
-		case .addItem:
-			let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-			item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add")
-			item.label = "Add"
-			item.toolTip = "Add"
-			return item
 		default:
 			return nil
 		}

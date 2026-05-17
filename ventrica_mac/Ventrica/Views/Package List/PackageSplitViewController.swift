@@ -29,26 +29,22 @@ final class PackageSplitViewController: NSSplitViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		
+
 		let listItem = NSSplitViewItem(viewController: _listController)
 		listItem.minimumThickness = 280
 		listItem.maximumThickness = 280
-		
+
 		_detailItem = NSSplitViewItem(viewController: NoPackageViewController())
 		_detailItem.minimumThickness = 400
-		
-		addSplitViewItem(listItem)
+
 		addSplitViewItem(_detailItem)
-		
+		insertSplitViewItem(listItem, at: 0)
+
 		splitView.dividerStyle = .thin
 	}
 	
-	var isSourcesList: Bool { _listController is SourcesViewController }
-
 	func setDetailViewController(_ controller: NSViewController) {
-		guard isViewLoaded else {
-			return
-		}
+		guard isViewLoaded else { return }
 		
 		let newItem = NSSplitViewItem(viewController: controller)
 		newItem.minimumThickness = 400
@@ -56,17 +52,6 @@ final class PackageSplitViewController: NSSplitViewController {
 		removeSplitViewItem(_detailItem)
 		addSplitViewItem(newItem)
 		_detailItem = newItem
-	}
-	// MARK: - Toolbar: forward addItem to list VC if it handles it
-	@objc func addItem(_ sender: Any?) {
-		(_listController as? SourcesViewController)?.addItem(sender)
-	}
-
-	override func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
-		if item.action == #selector(addItem(_:)) {
-			return _listController is SourcesViewController
-		}
-		return super.validateUserInterfaceItem(item)
 	}
 }
 

@@ -51,8 +51,8 @@ final class PackageHeaderView: NSView {
 	private let _getButton = VNPillButton()
 	private var _queueObserver: Any?
 	
-	private let _textStack: NSStackView = {
-		let v = NSStackView()
+	private lazy var _textStack: NSStackView = {
+		let v = NSStackView(views: [_nameLabel, _descriptionLabel, _spacer, _getButton])
 		v.orientation = .vertical
 		v.alignment = .leading
 		v.spacing = 4
@@ -70,9 +70,6 @@ final class PackageHeaderView: NSView {
 	}
 	
 	private func _setup() {
-		[_nameLabel, _descriptionLabel, _spacer, _getButton].forEach {
-			_textStack.addArrangedSubview($0)
-		}
 		[_iconView, _textStack].forEach {
 			addSubview($0)
 			$0.translatesAutoresizingMaskIntoConstraints = false

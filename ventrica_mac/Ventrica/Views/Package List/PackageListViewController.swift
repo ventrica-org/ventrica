@@ -48,10 +48,8 @@ final class PackageListViewController: NSViewController {
 	private func _setupScrollView() {
 		_scrollView.tableView.delegate = self
 		_scrollView.tableView.dataSource = self
-		_scrollView.tableView.headerView = nil
-		_scrollView.tableView.allowsEmptySelection = false
-		
 		_scrollView.translatesAutoresizingMaskIntoConstraints = false
+		
 		view.addSubview(_scrollView)
 		
 		NSLayoutConstraint.activate([
