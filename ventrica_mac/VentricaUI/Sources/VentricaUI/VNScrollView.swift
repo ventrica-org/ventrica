@@ -17,7 +17,7 @@ public class VNScrollView: NSScrollView {
 		v.allowsColumnReordering = false
 		v.allowsColumnSelection = false
 		v.allowsColumnResizing = false
-		v.allowsEmptySelection = false
+		v.allowsEmptySelection = true
 		return v
 	}()
 	

@@ -43,7 +43,7 @@ final class SourcesSplitViewController: VNSplitViewController {
 extension SourcesSplitViewController: SourcesListViewControllerDelegate {
 	func sourcesViewController(_ vc: SourcesListViewController, didSelect repo: Repo?) {
 		if let repo {
-			setDetailViewController(PackagesSplitViewController(titleText: repo.name, url: repo.url))
+			setDetailViewController(PackagesCollectionViewController(titleText: repo.name, url: repo.url))
 		} else {
 			setDetailViewController(_noSourcesController)
 		}

@@ -39,7 +39,7 @@ final class SourcesListViewController: NSViewController {
 	private func _setupScrollView() {
 		_scrollView.tableView.delegate = self
 		_scrollView.tableView.dataSource = self
-		_scrollView.tableView.headerView = nil
+		_scrollView.translatesAutoresizingMaskIntoConstraints = false
 		
 		view.addSubview(_scrollView)
 		
