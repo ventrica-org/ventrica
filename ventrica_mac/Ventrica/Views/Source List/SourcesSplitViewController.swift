@@ -10,6 +10,7 @@ import VentricaUI
 
 final class SourcesSplitViewController: VNSplitViewController {
 	private let _sourcesController = SourcesListViewController()
+	
 	private let _noSourcesController: EmptyViewController = {
 		let v = EmptyViewController()
 		v.configure(
@@ -31,7 +32,11 @@ final class SourcesSplitViewController: VNSplitViewController {
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		setup(listViewController: _sourcesController, initialDetailViewController: _noSourcesController)
+		
+		setup(
+			listViewController: _sourcesController,
+			initialDetailViewController: _noSourcesController
+		)
 	}
 }
 

@@ -29,7 +29,8 @@ final class PackageViewController: NSViewController {
 	required init?(coder: NSCoder) { fatalError() }
 	
 	override func viewDidLoad() {
-		view = NSView()
+		view = .init()
+		
 		_setupScrollView()
 		_setupStackView()
 		_addHeaderView()

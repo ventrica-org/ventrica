@@ -9,9 +9,9 @@ import AppKit
 import VentricaUI
 
 final class PackagesSplitViewController: VNSplitViewController {
-	private let _listVC: PackagesListViewController
+	private let _packagesController: PackagesListViewController
 	
-	private let _noSourcesController: EmptyViewController = {
+	private let _noPackagesController: EmptyViewController = {
 		let v = EmptyViewController()
 		v.configure(
 			title: .localized("No Package Selected"),
@@ -19,21 +19,25 @@ final class PackagesSplitViewController: VNSplitViewController {
 		)
 		return v
 	}()
-
+	
 	init(titleText: String, url: String?) {
-		_listVC = PackagesListViewController(titleText: titleText, url: url)
+		_packagesController = PackagesListViewController(titleText: titleText, url: url)
 		super.init(nibName: nil, bundle: nil)
-		_listVC.delegate = self
+		_packagesController.delegate = self
 	}
-
+	
 	@available(*, unavailable)
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
-
+	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		setup(listViewController: _listVC, initialDetailViewController: _noSourcesController)
+		
+		setup(
+			listViewController: _packagesController,
+			initialDetailViewController: _noPackagesController
+		)
 	}
 }
 
@@ -42,7 +46,7 @@ extension PackagesSplitViewController: PackagesListViewControllerDelegate {
 		if let package {
 			setDetailViewController(PackageViewController(package: package))
 		} else {
-			setDetailViewController(_noSourcesController)
+			setDetailViewController(_noPackagesController)
 		}
 	}
 }

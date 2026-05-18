@@ -9,6 +9,9 @@ import AppKit
 import VentricaUI
 
 final class MainWindowController: NSWindowController {
+	private let _contentSize 	= NSSize(width: 1100, height: 700)
+	private let _minContentSize = NSSize(width: 900, height: 300)
+	
 	private let _splitVC = MainSplitViewController()
 	private var _currentContentVC: NSViewController?
 	
@@ -29,8 +32,8 @@ final class MainWindowController: NSWindowController {
 			contentViewController: _splitVC
 		)
 		
-		window.setContentSize(NSSize(width: 1100, height: 700))
-		window.contentMinSize = NSSize(width: 900, height: 300)
+		window.setContentSize(_contentSize)
+		window.contentMinSize = _minContentSize
 		window.titleVisibility = .visible
 		window.toolbarStyle = .unified
 		

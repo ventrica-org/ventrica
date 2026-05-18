@@ -21,7 +21,7 @@ final class ContentContainerViewController: NSViewController {
 	required init?(coder: NSCoder) { fatalError() }
 	
 	override func loadView() {
-		view = NSView()
+		view = .init()
 	}
 	
 	override func viewDidLoad() {

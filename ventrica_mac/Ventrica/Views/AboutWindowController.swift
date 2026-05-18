@@ -9,15 +9,15 @@ import AppKit
 import VentricaUI
 
 final class AboutWindowController: NSWindowController {
+	private let _contentSize = NSSize(width: 270, height: 320)
+	
 	init() {
 		let window = VNWindow(
 			title: "About \(Bundle.main.name)",
 			contentViewController: AboutViewController()
 		)
 		
-		let size = NSSize(width: 270, height: 320)
-		
-		window.setContentSize(size)
+		window.setContentSize(_contentSize)
 		window.titlebarAppearsTransparent = true
 		window.isMovableByWindowBackground = true
 		window.titleVisibility = .hidden

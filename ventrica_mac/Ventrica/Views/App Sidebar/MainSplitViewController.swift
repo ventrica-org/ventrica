@@ -54,7 +54,7 @@ final class MainSplitViewController: NSSplitViewController {
 	
 	private let _viewBlur: NSVisualEffectView = {
 		let v = NSVisualEffectView()
-		v.material = .hudWindow
+		v.material = .sidebar
 		v.blendingMode = .behindWindow
 		v.state = .active
 		return v
