@@ -18,10 +18,10 @@ pub enum Error {
     #[error("package '{name}' not found")]
     PackageNotFound { name: String },
 
-    #[error("package '{name}@{version}' not found in store")]
+    #[error("package '{name}-{version}' not found in store")]
     PackageVersionNotFound { name: String, version: String },
 
-    #[error("package '{name}@{version}' is already installed")]
+    #[error("package '{name}-{version}' is already installed")]
     AlreadyInstalled { name: String, version: String },
 
     #[error("version conflict for '{name}': {reason}")]

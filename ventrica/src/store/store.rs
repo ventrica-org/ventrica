@@ -12,13 +12,13 @@ pub const REPOS_DIR: &str = "/ventrica/repos";
 pub const GENERATIONS_DIR: &str = "/ventrica/generations";
 pub const LIVE_PREFIX: &str = "/ventrica/live";
 
-/// `<name>@<version>`.
+/// `<name>-<version>`.
 #[must_use]
 pub fn simple_store_name(name: &str, version: &str) -> String {
-    format!("{name}@{version}")
+    format!("{name}-{version}")
 }
 
-/// `/ventrica/store/<name>@<version>`.
+/// `/ventrica/store/<name>-<version>`.
 #[must_use]
 pub fn simple_store_path(name: &str, version: &str) -> PathBuf {
     Path::new(STORE_DIR).join(simple_store_name(name, version))

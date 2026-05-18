@@ -33,8 +33,11 @@ final class InstallQueue {
 	private(set) var installedNames: Set<String> = []
 	private(set) var isApplying = false
 	
+	private var installedVersions: [String: String] = [:]
+	private var reverseDeps: [String: [String]] = [:]
+
 	var isEmpty: Bool { installItems.isEmpty && uninstallItems.isEmpty }
-	
+
 	private init() {
 		_refreshInstalledNames()
 		NotificationCenter.default.addObserver(
@@ -72,7 +75,27 @@ final class InstallQueue {
 		}
 		guard isInstalled(package.name), !isQueuedForUninstall(package.name) else { return }
 		
+		// collect every installed package that depends on this one
+		// hopefully this mirrors ventricad logic?
+		var bfsQueue = [package.name]
+		var visited = Set([package.name])
+		var dependents: [UninstallItem] = []
+		while !bfsQueue.isEmpty {
+			let current = bfsQueue.removeFirst()
+			for dependent in reverseDeps[current, default: []] {
+				guard !visited.contains(dependent) else { continue }
+				visited.insert(dependent)
+				if isInstalled(dependent), !isQueuedForUninstall(dependent),
+				   let version = installedVersions[dependent] {
+					dependents.append(UninstallItem(name: dependent, version: version))
+				}
+				bfsQueue.append(dependent)
+			}
+		}
+		dependents.reverse()
+		uninstallItems.append(contentsOf: dependents)
 		uninstallItems.append(UninstallItem(name: package.name, version: package.version))
+		
 		_postChange()
 	}
 	
@@ -139,19 +162,27 @@ final class InstallQueue {
 	
 	private func _refreshInstalledNames() {
 		DispatchQueue.global(qos: .utility).async { [weak self] in
-			let names = Self._fetchInstalledNames()
+			let data = Self._fetchInstalledData()
 			DispatchQueue.main.async { [weak self] in
-				self?.installedNames = names
+				self?.installedNames = data.names
+				self?.installedVersions = data.versions
+				self?.reverseDeps = data.reverseDeps
 				self?._postChange()
 			}
 		}
 	}
 	
-	private static func _fetchInstalledNames() -> Set<String> {
+	private struct InstalledData {
+		var names: Set<String>
+		var versions: [String: String]
+		var reverseDeps: [String: [String]]
+	}
+	
+	private static func _fetchInstalledData() -> InstalledData {
 		var err: OpaquePointer? = nil
 		guard let store = ventrica_store_open_default(&err) else {
 			if let e = err { ventrica_error_free(e) }
-			return []
+			return InstalledData(names: [], versions: [:], reverseDeps: [:])
 		}
 		defer { ventrica_store_close(store) }
 		
@@ -160,18 +191,30 @@ final class InstallQueue {
 		
 		guard ventrica_list_packages(store, &arr, &count, &err) == 0 else {
 			if let e = err { ventrica_error_free(e) }
-			return []
+			return InstalledData(names: [], versions: [:], reverseDeps: [:])
 		}
 		
 		var names = Set<String>()
+		var versions: [String: String] = [:]
+		var reverseDeps: [String: [String]] = [:]
 		if let arr {
 			defer { ventrica_pkg_array_free(arr, UInt(count)) }
 			for i in 0..<count {
 				guard let pkg = arr[i] else { continue }
-				names.insert(String(cString: pkg.pointee.name))
+				let name = String(cString: pkg.pointee.name)
+				let version = String(cString: pkg.pointee.version)
+				names.insert(name)
+				versions[name] = version
+				let depNames = cStringArrayToSwift(
+					pkg.pointee.run_dep_names,
+					maxCount: Int(clamping: pkg.pointee.run_dep_names_count)
+				)
+				for dep in depNames {
+					reverseDeps[dep, default: []].append(name)
+				}
 			}
 		}
-		return names
+		return InstalledData(names: names, versions: versions, reverseDeps: reverseDeps)
 	}
 	
 	private static func _applySync(
@@ -190,8 +233,11 @@ final class InstallQueue {
 			}
 		}
 		for (name, version) in toRemove {
-			guard ventrica_remove(store, name, version, &err) == 0 else {
-				return (false, _consumeError(&err))
+			if ventrica_remove(store, name, version, &err) != 0 {
+				let msg = _consumeError(&err) ?? ""
+				guard msg.contains("not found") else {
+					return (false, msg)
+				}
 			}
 		}
 		return (true, nil)

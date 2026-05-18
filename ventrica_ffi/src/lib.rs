@@ -21,6 +21,8 @@ pub struct VentPackage {
     pub installed_at: i64,
     pub icon: *const c_char,
     pub native_description: *const c_char,
+    pub run_dep_names: *const *const c_char,
+    pub run_dep_names_count: usize,
 }
 
 impl Drop for VentPackage {
@@ -34,6 +36,18 @@ impl Drop for VentPackage {
             free_cstr(self.store_path);
             free_cstr_nullable(self.icon);
             free_cstr_nullable(self.native_description);
+            if !self.run_dep_names.is_null() && self.run_dep_names_count > 0 {
+                let slice =
+                    std::slice::from_raw_parts(self.run_dep_names, self.run_dep_names_count);
+                for &ptr in slice {
+                    free_cstr_nullable(ptr);
+                }
+                drop(Vec::from_raw_parts(
+                    self.run_dep_names as *mut *const c_char,
+                    self.run_dep_names_count,
+                    self.run_dep_names_count,
+                ));
+            }
         }
     }
 }
@@ -137,6 +151,22 @@ impl Drop for VentRepoPackage {
 
 pub struct VentError {
     message: CString,
+}
+
+/// Allocate a C string pointer array from an iterator of `&str`, returning
+/// the raw pointer and the element count. The caller is responsible for
+/// freeing every element and the array itself.
+fn make_cstr_array<'a>(iter: impl Iterator<Item = &'a str>) -> (*const *const c_char, usize) {
+    let mut v: Vec<*const c_char> = iter.map(cs).collect();
+    v.shrink_to_fit();
+    let count = v.len();
+    if count == 0 {
+        (std::ptr::null(), 0)
+    } else {
+        let ptr = v.as_ptr();
+        std::mem::forget(v);
+        (ptr, count)
+    }
 }
 
 fn cs(s: impl Into<Vec<u8>>) -> *const c_char {
@@ -397,9 +427,29 @@ pub unsafe extern "C" fn ventrica_list_packages(
         Ok(data) => {
             let rows: Vec<serde_json::Value> =
                 data.and_then(|v| v.as_array().cloned()).unwrap_or_default();
+            // Build a store_path → name map so dep names can be resolved
+            // without parsing the path string (store_name format is "<name>-<version>").
+            let sp_to_name: std::collections::HashMap<&str, &str> = rows
+                .iter()
+                .filter_map(|r| {
+                    let sp = r["store_path"].as_str()?;
+                    let name = r["name"].as_str()?;
+                    Some((sp, name))
+                })
+                .collect();
             let items: Vec<*mut VentPackage> = rows
                 .iter()
                 .map(|r| {
+                    let dep_names: Vec<&str> = r["run_dep_store_paths"]
+                        .as_array()
+                        .map(|a| {
+                            a.iter()
+                                .filter_map(|v| v.as_str())
+                                .filter_map(|sp| sp_to_name.get(sp).copied())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let (dep_names_ptr, dep_names_count) = make_cstr_array(dep_names.into_iter());
                     Box::into_raw(Box::new(VentPackage {
                         id: r["id"].as_i64().unwrap_or(0),
                         name: cs(r["name"].as_str().unwrap_or("")),
@@ -413,6 +463,8 @@ pub unsafe extern "C" fn ventrica_list_packages(
                         native_description: cs_opt(
                             r["native_description"].as_str().map(str::to_owned),
                         ),
+                        run_dep_names: dep_names_ptr,
+                        run_dep_names_count: dep_names_count,
                     }))
                 })
                 .collect();

@@ -31,7 +31,7 @@ struct Package {
 		self.storeName			= nil
 		self.fileName			= nil
 		self.varHash			= nil
-		self.runDeps			= []
+		self.runDeps			= _cStringArrayToSwift(package.run_dep_names, maxCount: Int(package.run_dep_names_count))
 	}
 	
 	init(repoPackage: VentRepoPackage) {
@@ -49,11 +49,16 @@ struct Package {
 	}
 }
 
-fileprivate func _cStringArrayToSwift(
+func cStringArrayToSwift(
 	_ pointer: UnsafePointer<UnsafePointer<CChar>?>?,
 	maxCount: Int
 ) -> [String] {
-	guard let pointer = pointer else { return [] }
+	guard
+		let pointer,
+		maxCount > 0
+	else {
+		return []
+	}
 
 	var result: [String] = []
 
