@@ -6,8 +6,6 @@
 import AppKit
 import VentricaKit
 
-// MARK: - VNQueueItem
-
 struct QueueItem: Equatable {
 	let name: String
 	let version: String
@@ -16,11 +14,10 @@ struct QueueItem: Equatable {
 	static func == (lhs: QueueItem, rhs: QueueItem) -> Bool { lhs.name == rhs.name }
 }
 
-// MARK: - VNUninstallItem
-
 struct UninstallItem: Equatable {
 	let name: String
 	let version: String
+	let isDependency: Bool
 	
 	static func == (lhs: UninstallItem, rhs: UninstallItem) -> Bool { lhs.name == rhs.name }
 }
@@ -75,8 +72,8 @@ final class InstallQueue {
 		}
 		guard isInstalled(package.name), !isQueuedForUninstall(package.name) else { return }
 		
-		// collect every installed package that depends on this one
-		// hopefully this mirrors ventricad logic?
+		// BFS over the reverse-dep map to find every installed package that
+		// (transitively) depends on this one
 		var bfsQueue = [package.name]
 		var visited = Set([package.name])
 		var dependents: [UninstallItem] = []
@@ -87,14 +84,14 @@ final class InstallQueue {
 				visited.insert(dependent)
 				if isInstalled(dependent), !isQueuedForUninstall(dependent),
 				   let version = installedVersions[dependent] {
-					dependents.append(UninstallItem(name: dependent, version: version))
+					dependents.append(UninstallItem(name: dependent, version: version, isDependency: true))
 				}
 				bfsQueue.append(dependent)
 			}
 		}
 		dependents.reverse()
 		uninstallItems.append(contentsOf: dependents)
-		uninstallItems.append(UninstallItem(name: package.name, version: package.version))
+		uninstallItems.append(UninstallItem(name: package.name, version: package.version, isDependency: false))
 		
 		_postChange()
 	}
@@ -128,7 +125,7 @@ final class InstallQueue {
 		_postChange()
 		
 		let toInstall = installItems.map { $0.name }
-		let toRemove  = uninstallItems.map { ($0.name, $0.version) }
+		let toRemove  = uninstallItems.filter { !$0.isDependency }.map { ($0.name, $0.version) }
 		
 		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
 			let (success, errorMessage) = Self._applySync(toInstall: toInstall, toRemove: toRemove)
@@ -233,11 +230,8 @@ final class InstallQueue {
 			}
 		}
 		for (name, version) in toRemove {
-			if ventrica_remove(store, name, version, &err) != 0 {
-				let msg = _consumeError(&err) ?? ""
-				guard msg.contains("not found") else {
-					return (false, msg)
-				}
+			guard ventrica_remove(store, name, version, &err) == 0 else {
+				return (false, _consumeError(&err))
 			}
 		}
 		return (true, nil)
