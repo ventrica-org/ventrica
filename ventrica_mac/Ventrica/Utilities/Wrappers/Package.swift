@@ -31,7 +31,7 @@ struct Package {
 		self.storeName			= nil
 		self.fileName			= nil
 		self.varHash			= nil
-		self.runDeps			= _cStringArrayToSwift(package.run_dep_names, maxCount: Int(package.run_dep_names_count))
+		self.runDeps			= cStringArrayToSwift(package.run_dep_names, maxCount: Int(package.run_dep_names_count))
 	}
 	
 	init(repoPackage: VentRepoPackage) {
@@ -45,7 +45,7 @@ struct Package {
 		self.storeName			= String(cString: repoPackage.store_name)
 		self.fileName			= String(cString: repoPackage.filename)
 		self.varHash			= String(cString: repoPackage.var_hash)
-		self.runDeps 			= _cStringArrayToSwift(repoPackage.run_deps, maxCount: Int(repoPackage.run_deps_count))
+		self.runDeps 			= cStringArrayToSwift(repoPackage.run_deps, maxCount: Int(repoPackage.run_deps_count))
 	}
 }
 
