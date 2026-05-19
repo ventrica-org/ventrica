@@ -20,6 +20,13 @@ final class SourcesListViewController: NSViewController {
 	private let _scrollView = VNScrollView()
 	private var _repoData: [Repo] = []
 	
+	private enum RowItem {
+		case section(String)
+		case repo(Repo)
+	}
+	
+	private var _rows: [RowItem] = []
+	
 	init() {
 		super.init(nibName: nil, bundle: nil)
 	}
@@ -95,29 +102,74 @@ final class SourcesListViewController: NSViewController {
 		}
 		
 		_repoData = repos
+		_rebuildRows()
+	}
+	
+	private func _rebuildRows() {
+		_rows.removeAll()
+		let sorted = _repoData.sorted {
+			return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+		}
+		
+		let grouped = Dictionary(grouping: sorted) { pkg -> String in
+			return String(pkg.name.prefix(1)).uppercased()
+		}
+		
+		let keys = grouped.keys.sorted { lhs, rhs in
+			return lhs < rhs
+		}
+		
+		for key in keys {
+			if let pkgs = grouped[key] {
+				_rows.append(.section(key))
+				pkgs.forEach { _rows.append(.repo($0)) }
+			}
+		}
+		
 		_scrollView.tableView.reloadData()
 	}
 }
 
 extension SourcesListViewController: NSTableViewDataSource, NSTableViewDelegate {
 	func numberOfRows(in tableView: NSTableView) -> Int {
-		_repoData.count
+		_rows.count
+	}
+	
+	func tableView(_ tableView: NSTableView, isGroupRow row: Int) -> Bool {
+		if case .section = _rows[row] {
+			true
+		} else {
+			false
+		}
 	}
 	
 	func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-		let repo = _repoData[row]
-		
-		let cell = tableView.makeView(
-			withIdentifier: VNIconTableCellView.identifier,
-			owner: self
-		) as? VNIconTableCellView ?? {
-			let newCell = VNIconTableCellView()
-			newCell.identifier = VNIconTableCellView.identifier
-			return newCell
-		}()
-		
-		cell.configure(repo: repo)
-		return cell
+		switch _rows[row] {
+		case .section(let title):
+			let cell = tableView.makeView(
+				withIdentifier: VNSectionTableCellView.identifier,
+				owner: self
+			) as? VNSectionTableCellView ?? {
+				let newCell = VNSectionTableCellView()
+				newCell.identifier = VNSectionTableCellView.identifier
+				return newCell
+			}()
+			
+			cell.configure(title: title)
+			return cell
+		case .repo(let repo):
+			let cell = tableView.makeView(
+				withIdentifier: VNIconTableCellView.identifier,
+				owner: self
+			) as? VNIconTableCellView ?? {
+				let newCell = VNIconTableCellView()
+				newCell.identifier = VNIconTableCellView.identifier
+				return newCell
+			}()
+			
+			cell.configure(repo: repo)
+			return cell
+		}
 	}
 	
 	func tableViewSelectionDidChange(_ notification: Notification) {
@@ -127,9 +179,10 @@ extension SourcesListViewController: NSTableViewDataSource, NSTableViewDelegate 
 			delegate?.sourcesViewController(self, didSelect: nil)
 			return
 		}
-		
-		let repo = _repoData[selectedRow]
-		delegate?.sourcesViewController(self, didSelect: repo)
+
+		if case let .repo(pkg) = _rows[selectedRow] {
+			delegate?.sourcesViewController(self, didSelect: pkg)
+		}
 	}
 }
 

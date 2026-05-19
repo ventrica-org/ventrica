@@ -170,8 +170,6 @@ final class PackagesCollectionViewController: NSViewController {
 	}
 }
 
-// MARK: - NSCollectionViewDataSource & NSCollectionViewDelegate
-
 extension PackagesCollectionViewController: NSCollectionViewDataSource, NSCollectionViewDelegate {
 	func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
 		_packages.count
@@ -206,8 +204,6 @@ extension PackagesCollectionViewController: NSCollectionViewDataSource, NSCollec
 		}
 	}
 }
-
-// MARK: - PackageGridItem
 
 private final class PackageGridItem: NSCollectionViewItem {
 	private let _iconSize: CGFloat = 48
@@ -271,7 +267,7 @@ private final class PackageGridItem: NSCollectionViewItem {
 			textStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
 			textStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 			
-			_separator.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+			_separator.leadingAnchor.constraint(equalTo: _iconView.trailingAnchor, constant: 12),
 			_separator.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
 			_separator.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 		])
