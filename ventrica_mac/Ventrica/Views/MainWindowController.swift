@@ -51,10 +51,22 @@ final class MainWindowController: NSWindowController {
 	}
 	
 	private func _toolbarIdentifiers() -> [NSToolbarItem.Identifier] {
+		if let splitVC = _currentContentVC as? VNSplitViewController,
+		   String(describing: type(of: splitVC)).contains("SourcesSplitViewController") {
+			return [
+				.toggleSidebar,
+				.mainSeparator,
+				.flexibleSpace,
+				.plus,
+				.innerSeparator,
+				.flexibleSpace,
+				.share
+			]
+		}
 		guard _currentContentVC is VNSplitViewController else {
 			return [.toggleSidebar, .mainSeparator]
 		}
-		return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator]
+		return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator, .flexibleSpace, .share]
 	}
 	
 	private func _rebuildToolbar() {
@@ -81,7 +93,7 @@ extension MainWindowController: NSToolbarDelegate {
 	}
 	
 	func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-		[.toggleSidebar, .flexibleSpace, .mainSeparator, .innerSeparator]
+		[.toggleSidebar, .flexibleSpace, .mainSeparator, .innerSeparator, .plus, .share]
 	}
 	
 	func toolbar(
@@ -103,9 +115,41 @@ extension MainWindowController: NSToolbarDelegate {
 				splitView: split.splitView,
 				dividerIndex: 0
 			)
+		case .plus:
+			let item = NSToolbarItem(itemIdentifier: .plus)
+			item.isBordered = true
+			item.label = "Add"
+			item.paletteLabel = "Add"
+			item.toolTip = "Add Source"
+			item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add")
+			item.target = self
+			item.action = #selector(_plusToolbarAction(_:))
+			return item
+		case .share:
+			let item = NSToolbarItem(itemIdentifier: .share)
+			item.isBordered = true
+			item.label = "Share"
+			item.paletteLabel = "Share"
+			item.toolTip = "Share"
+			item.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Share")
+			item.target = self
+			item.action = #selector(_shareToolbarAction(_:))
+			return item
 		default:
 			return nil
 		}
 	}
+	
+	@objc private func _plusToolbarAction(_ sender: Any?) {}
+	
+	@objc private func _shareToolbarAction(_ sender: Any?) {}
+	
+	@objc protocol ShareableDetailViewController {
+		func handleShare(from sender: AnyObject)
+	}
 }
 
+extension NSToolbarItem.Identifier {
+	static let share = NSToolbarItem.Identifier("VNShareToolbarItem")
+	static let plus = NSToolbarItem.Identifier("VNPlusToolbarItem")
+}

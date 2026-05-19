@@ -10,6 +10,9 @@ import VentricaUI
 
 final class SourcesSplitViewController: VNSplitViewController {
 	private let _sourcesController = SourcesListViewController()
+
+	// Expose sourcesController for MainWindowController
+	var sourcesController: SourcesListViewController { _sourcesController }
 	
 	private let _noSourcesController: EmptyViewController = {
 		let v = EmptyViewController()
