@@ -3,12 +3,9 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 
-use ventricad::{DaemonClient, Message, Request};
+use ventricad::{DEFAULT_SOCKET, DaemonClient, Message, Request};
 use ventricad::{PackageEntry, RepoRecord};
 
-pub struct VentStore {
-    socket_path: String,
-}
 #[repr(C)]
 pub struct VentPackage {
     pub id: i64,
@@ -153,9 +150,6 @@ pub struct VentError {
     message: CString,
 }
 
-/// Allocate a C string pointer array from an iterator of `&str`, returning
-/// the raw pointer and the element count. The caller is responsible for
-/// freeing every element and the array itself.
 fn make_cstr_array<'a>(iter: impl Iterator<Item = &'a str>) -> (*const *const c_char, usize) {
     let mut v: Vec<*const c_char> = iter.map(cs).collect();
     v.shrink_to_fit();
@@ -215,8 +209,8 @@ unsafe fn cstr_to_str<'a>(s: *const c_char, field: &str) -> Result<&'a str, Stri
         .map_err(|_| format!("{field} is not valid UTF-8"))
 }
 
-fn daemon_call(socket_path: &str, req: &Request) -> Result<Option<serde_json::Value>, String> {
-    let mut client = DaemonClient::connect_to(socket_path)
+fn daemon_call(req: &Request) -> Result<Option<serde_json::Value>, String> {
+    let mut client = DaemonClient::connect_to(DEFAULT_SOCKET)
         .map_err(|e| format!("cannot connect to ventricad: {e}"))?;
 
     let mut data: Option<serde_json::Value> = None;
@@ -242,49 +236,11 @@ fn into_ptr_array<T>(mut v: Vec<*mut T>) -> (*mut *mut T, usize) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_store_open(
-    socket_path: *const c_char,
-    _user_path: *const c_char,
-    out_err: *mut *mut VentError,
-) -> *mut VentStore {
-    clear_error(out_err);
-    let path = if socket_path.is_null() {
-        std::env::var(ventricad::SOCKET_ENV)
-            .unwrap_or_else(|_| ventricad::DEFAULT_SOCKET.to_owned())
-    } else {
-        match cstr_to_str(socket_path, "socket_path") {
-            Ok(s) => s.to_owned(),
-            Err(e) => {
-                set_error(out_err, e);
-                return std::ptr::null_mut();
-            }
-        }
-    };
-    Box::into_raw(Box::new(VentStore { socket_path: path }))
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_store_open_default(
-    out_err: *mut *mut VentError,
-) -> *mut VentStore {
-    ventrica_store_open(std::ptr::null(), std::ptr::null(), out_err)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_store_close(store: *mut VentStore) {
-    if !store.is_null() {
-        drop(Box::from_raw(store));
-    }
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_install(
-    store: *mut VentStore,
     recipe_path: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let recipe = match cstr_to_str(recipe_path, "recipe_path") {
         Ok(r) => r.to_owned(),
         Err(e) => {
@@ -292,12 +248,9 @@ pub unsafe extern "C" fn ventrica_install(
             return -1;
         }
     };
-    match daemon_call(
-        &s.socket_path,
-        &Request::Install {
-            recipes: vec![recipe],
-        },
-    ) {
+    match daemon_call(&Request::Install {
+        recipes: vec![recipe],
+    }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -308,22 +261,19 @@ pub unsafe extern "C" fn ventrica_install(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_install_name(
-    store: *mut VentStore,
     name: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
-    ventrica_install(store, name, out_err)
+    ventrica_install(name, out_err)
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_remove(
-    store: *mut VentStore,
     name: *const c_char,
     version: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let name_str = match cstr_to_str(name, "name") {
         Ok(n) => n.to_owned(),
         Err(e) => {
@@ -342,13 +292,10 @@ pub unsafe extern "C" fn ventrica_remove(
             }
         }
     };
-    match daemon_call(
-        &s.socket_path,
-        &Request::Remove {
-            name: name_str,
-            version: ver,
-        },
-    ) {
+    match daemon_call(&Request::Remove {
+        name: name_str,
+        version: ver,
+    }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -359,13 +306,11 @@ pub unsafe extern "C" fn ventrica_remove(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_upgrade(
-    store: *mut VentStore,
     names: *const *const c_char,
     names_count: usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let mut pkg_names: Vec<String> = Vec::new();
     if !names.is_null() && names_count > 0 {
         let slice = std::slice::from_raw_parts(names, names_count);
@@ -379,7 +324,7 @@ pub unsafe extern "C" fn ventrica_upgrade(
             }
         }
     }
-    match daemon_call(&s.socket_path, &Request::Upgrade { names: pkg_names }) {
+    match daemon_call(&Request::Upgrade { names: pkg_names }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -389,19 +334,11 @@ pub unsafe extern "C" fn ventrica_upgrade(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_rollback(
-    store: *mut VentStore,
-    generation: u32,
-    out_err: *mut *mut VentError,
-) -> c_int {
+pub unsafe extern "C" fn ventrica_rollback(generation: u32, out_err: *mut *mut VentError) -> c_int {
     clear_error(out_err);
-    let s = &*store;
-    match daemon_call(
-        &s.socket_path,
-        &Request::Rollback {
-            generation: Some(generation),
-        },
-    ) {
+    match daemon_call(&Request::Rollback {
+        generation: Some(generation),
+    }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -412,14 +349,12 @@ pub unsafe extern "C" fn ventrica_rollback(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_list_packages(
-    store: *mut VentStore,
     arr_out: *mut *mut *mut VentPackage,
     count_out: *mut usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
-    match daemon_call(&s.socket_path, &Request::ListPackages) {
+    match daemon_call(&Request::ListPackages) {
         Err(e) => {
             set_error(out_err, e);
             -1
@@ -427,8 +362,7 @@ pub unsafe extern "C" fn ventrica_list_packages(
         Ok(data) => {
             let rows: Vec<serde_json::Value> =
                 data.and_then(|v| v.as_array().cloned()).unwrap_or_default();
-            // Build a store_path → name map so dep names can be resolved
-            // without parsing the path string (store_name format is "<name>-<version>").
+
             let sp_to_name: std::collections::HashMap<&str, &str> = rows
                 .iter()
                 .filter_map(|r| {
@@ -478,14 +412,12 @@ pub unsafe extern "C" fn ventrica_list_packages(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_list_generations(
-    store: *mut VentStore,
     arr_out: *mut *mut *mut VentGeneration,
     count_out: *mut usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
-    match daemon_call(&s.socket_path, &Request::ListGenerations) {
+    match daemon_call(&Request::ListGenerations) {
         Err(e) => {
             set_error(out_err, e);
             -1
@@ -512,13 +444,9 @@ pub unsafe extern "C" fn ventrica_list_generations(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_current_generation(
-    store: *mut VentStore,
-    out_err: *mut *mut VentError,
-) -> i32 {
+pub unsafe extern "C" fn ventrica_current_generation(out_err: *mut *mut VentError) -> i32 {
     clear_error(out_err);
-    let s = &*store;
-    match daemon_call(&s.socket_path, &Request::ListGenerations) {
+    match daemon_call(&Request::ListGenerations) {
         Err(e) => {
             set_error(out_err, e);
             -1
@@ -537,12 +465,10 @@ pub unsafe extern "C" fn ventrica_current_generation(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_add_repo(
-    store: *mut VentStore,
     url: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let url_str = match cstr_to_str(url, "url") {
         Ok(u) => u.to_owned(),
         Err(e) => {
@@ -550,7 +476,7 @@ pub unsafe extern "C" fn ventrica_add_repo(
             return -1;
         }
     };
-    match daemon_call(&s.socket_path, &Request::AddRepo { url: url_str }) {
+    match daemon_call(&Request::AddRepo { url: url_str }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -561,12 +487,10 @@ pub unsafe extern "C" fn ventrica_add_repo(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_remove_repo(
-    store: *mut VentStore,
     url: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let url_str = match cstr_to_str(url, "url") {
         Ok(u) => u.to_owned(),
         Err(e) => {
@@ -574,7 +498,7 @@ pub unsafe extern "C" fn ventrica_remove_repo(
             return -1;
         }
     };
-    match daemon_call(&s.socket_path, &Request::RemoveRepo { url: url_str }) {
+    match daemon_call(&Request::RemoveRepo { url: url_str }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -585,14 +509,12 @@ pub unsafe extern "C" fn ventrica_remove_repo(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_list_repos(
-    store: *mut VentStore,
     arr_out: *mut *mut *mut VentRepo,
     count_out: *mut usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
-    match daemon_call(&s.socket_path, &Request::ListRepos) {
+    match daemon_call(&Request::ListRepos) {
         Err(e) => {
             set_error(out_err, e);
             -1
@@ -622,14 +544,12 @@ pub unsafe extern "C" fn ventrica_list_repos(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_search(
-    store: *mut VentStore,
     query: *const c_char,
     arr_out: *mut *mut *mut VentSearchResult,
     count_out: *mut usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let q = match cstr_to_str(query, "query") {
         Ok(q) => q.to_owned(),
         Err(e) => {
@@ -637,7 +557,7 @@ pub unsafe extern "C" fn ventrica_search(
             return -1;
         }
     };
-    match daemon_call(&s.socket_path, &Request::Search { query: q }) {
+    match daemon_call(&Request::Search { query: q }) {
         Err(e) => {
             set_error(out_err, e);
             -1
@@ -669,14 +589,12 @@ pub unsafe extern "C" fn ventrica_search(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_list_repo_packages(
-    store: *mut VentStore,
     url: *const c_char,
     arr_out: *mut *mut *mut VentRepoPackage,
     count_out: *mut usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let s = &*store;
     let url_str = match cstr_to_str(url, "url") {
         Ok(u) => u.to_owned(),
         Err(e) => {
@@ -684,7 +602,7 @@ pub unsafe extern "C" fn ventrica_list_repo_packages(
             return -1;
         }
     };
-    match daemon_call(&s.socket_path, &Request::ListRepoPackages { url: url_str }) {
+    match daemon_call(&Request::ListRepoPackages { url: url_str }) {
         Err(e) => {
             set_error(out_err, e);
             -1
