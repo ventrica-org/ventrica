@@ -177,16 +177,10 @@ final class InstallQueue {
 	
 	private static func _fetchInstalledData() -> InstalledData {
 		var err: OpaquePointer? = nil
-		guard let store = ventrica_store_open_default(&err) else {
-			if let e = err { ventrica_error_free(e) }
-			return InstalledData(names: [], versions: [:], reverseDeps: [:])
-		}
-		defer { ventrica_store_close(store) }
-		
 		var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
 		var count: Int = 0
 		
-		guard ventrica_list_packages(store, &arr, &count, &err) == 0 else {
+		guard ventrica_list_packages(&arr, &count, &err) == 0 else {
 			if let e = err { ventrica_error_free(e) }
 			return InstalledData(names: [], versions: [:], reverseDeps: [:])
 		}
@@ -219,18 +213,14 @@ final class InstallQueue {
 		toRemove: [(String, String)]
 	) -> (Bool, String?) {
 		var err: OpaquePointer? = nil
-		guard let store = ventrica_store_open_default(&err) else {
-			return (false, _consumeError(&err))
-		}
-		defer { ventrica_store_close(store) }
-		
+
 		for name in toInstall {
-			guard ventrica_install_name(store, name, &err) == 0 else {
+			guard ventrica_install_name(name, &err) == 0 else {
 				return (false, _consumeError(&err))
 			}
 		}
 		for (name, version) in toRemove {
-			guard ventrica_remove(store, name, version, &err) == 0 else {
+			guard ventrica_remove(name, version, &err) == 0 else {
 				return (false, _consumeError(&err))
 			}
 		}

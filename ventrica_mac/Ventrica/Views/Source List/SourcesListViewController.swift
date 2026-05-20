@@ -72,20 +72,10 @@ final class SourcesListViewController: NSViewController {
 		var repos: [Repo] = []
 		
 		var err: OpaquePointer? = nil
-		
-		guard let store = ventrica_store_open_default(&err) else {
-			if let e = err {
-				print(String(cString: ventrica_error_message(e)))
-				ventrica_error_free(e)
-			}
-			return
-		}
-		defer { ventrica_store_close(store) }
-		
 		var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepo>?>? = nil
 		var count: Int = 0
 		
-		guard ventrica_list_repos(store, &arr, &count, &err) == 0 else {
+		guard ventrica_list_repos(&arr, &count, &err) == 0 else {
 			if let e = err {
 				print(String(cString: ventrica_error_message(e)))
 				ventrica_error_free(e)

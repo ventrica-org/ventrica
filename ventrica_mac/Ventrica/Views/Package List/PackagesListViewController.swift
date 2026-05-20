@@ -121,25 +121,12 @@ final class PackagesListViewController: NSViewController {
 		var packages: [Package] = []
 		var err: OpaquePointer? = nil
 		
-		guard let store = ventrica_store_open_default(&err) else {
-			if let e = err {
-				print(String(cString: ventrica_error_message(e)))
-				ventrica_error_free(e)
-			}
-			
-			return
-		}
-		
-		defer {
-			ventrica_store_close(store)
-		}
-		
 		if let url = _url {
 			print(url)
 			var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepoPackage>?>? = nil
 			var pkgCount: Int = 0
 			
-			guard ventrica_list_repo_packages(store, url, &pkgArr, &pkgCount, &err) == 0 else {
+			guard ventrica_list_repo_packages(url, &pkgArr, &pkgCount, &err) == 0 else {
 				if let e = err {
 					print(String(cString: ventrica_error_message(e)))
 					ventrica_error_free(e)
@@ -162,7 +149,7 @@ final class PackagesListViewController: NSViewController {
 			var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
 			var count: Int = 0
 			
-			guard ventrica_list_packages(store, &arr, &count, &err) == 0 else {
+			guard ventrica_list_packages(&arr, &count, &err) == 0 else {
 				if let e = err {
 					print(String(cString: ventrica_error_message(e)))
 					ventrica_error_free(e)
