@@ -28,6 +28,20 @@ final class PackagesListViewController: NSViewController {
 	
 	private var _rows: [RowItem] = []
 	
+	var selectedPackage: Package? {
+		let row = _scrollView.tableView.selectedRow
+		
+		guard row >= 0 else {
+			return nil
+		}
+		
+		guard case let .package(repo) = _rows[row] else {
+			return nil
+		}
+		
+		return repo
+	}
+	
 	init(titleText: String, url: String?) {
 		self._url = url
 		super.init(nibName: nil, bundle: nil)
@@ -173,6 +187,27 @@ final class PackagesListViewController: NSViewController {
 		_packageData = packages
 		_rebuildRows()
 		
+	}
+}
+
+extension PackagesListViewController {
+	func shareItem() {
+		guard
+			let selectedPackage,
+			let view = view.window?.contentView
+		else {
+			return
+		}
+		
+		let picker = NSSharingServicePicker(
+			items: [selectedPackage.name]
+		)
+		
+		picker.show(
+			relativeTo: .zero,
+			of: view,
+			preferredEdge: .minY
+		)
 	}
 }
 

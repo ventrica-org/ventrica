@@ -27,6 +27,20 @@ final class SourcesListViewController: NSViewController {
 	
 	private var _rows: [RowItem] = []
 	
+	var selectedRepo: Repo? {
+		let row = _scrollView.tableView.selectedRow
+		
+		guard row >= 0 else {
+			return nil
+		}
+		
+		guard case let .repo(repo) = _rows[row] else {
+			return nil
+		}
+		
+		return repo
+	}
+	
 	init() {
 		super.init(nibName: nil, bundle: nil)
 	}
@@ -40,8 +54,6 @@ final class SourcesListViewController: NSViewController {
 		_setupScrollView()
 		_setupListeners()
 	}
-	
-	@objc func addItem(_ sender: Any?) {}
 	
 	private func _setupScrollView() {
 		_scrollView.tableView.delegate = self
@@ -117,6 +129,28 @@ final class SourcesListViewController: NSViewController {
 		}
 		
 		_scrollView.tableView.reloadData()
+	}
+}
+
+extension SourcesListViewController {
+	func addItem() {}
+	func shareItem() {
+		guard
+			let selectedRepo,
+			let view = view.window?.contentView
+		else {
+			return
+		}
+		
+		let picker = NSSharingServicePicker(
+			items: [selectedRepo.url]
+		)
+		
+		picker.show(
+			relativeTo: .zero,
+			of: view,
+			preferredEdge: .minY
+		)
 	}
 }
 

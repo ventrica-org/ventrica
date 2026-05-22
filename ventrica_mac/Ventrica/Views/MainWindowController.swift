@@ -13,16 +13,16 @@ final class MainWindowController: NSWindowController {
 	private let _minContentSize = NSSize(width: 900, height: 300)
 	
 	private let _splitVC = MainSplitViewController()
-	private var _currentContentVC: NSViewController?
+	
+	private weak var _currentContentVC: (
+		NSViewController & ToolbarConfigurable
+	)?
 	
 	private let _toolbar: NSToolbar = {
 		let v = NSToolbar(identifier: "VNMainToolbar")
 		v.displayMode = .iconOnly
 		v.allowsUserCustomization = false
 		v.showsBaselineSeparator = true
-		if #available(macOS 15.0, *) {
-			v.allowsDisplayModeCustomization = false
-		}
 		return v
 	}()
 	
@@ -49,52 +49,72 @@ final class MainWindowController: NSWindowController {
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
-	
-	private func _toolbarIdentifiers() -> [NSToolbarItem.Identifier] {
-		if let splitVC = _currentContentVC as? VNSplitViewController,
-		   String(describing: type(of: splitVC)).contains("SourcesSplitViewController") {
-			return [
-				.toggleSidebar,
-				.mainSeparator,
-				.flexibleSpace,
-				.plus,
-				.innerSeparator,
-				.flexibleSpace,
-				.share
-			]
-		}
-		guard _currentContentVC is VNSplitViewController else {
-			return [.toggleSidebar, .mainSeparator]
-		}
-		return [.toggleSidebar, .mainSeparator, .flexibleSpace, .innerSeparator, .flexibleSpace, .share]
+}
+
+private extension MainWindowController {
+	func _toolbarIdentifiers() -> [NSToolbarItem.Identifier] {
+		_currentContentVC?.toolbarIdentifiers ?? [.toggleSidebar, .mainSeparator]
 	}
 	
-	private func _rebuildToolbar() {
+	func _rebuildToolbarIfNeeded() {
 		guard let toolbar = window?.toolbar else { return }
-		for i in stride(from: toolbar.items.count - 1, through: 0, by: -1) {
+		
+		let current = toolbar.items.map(\.itemIdentifier)
+		let desired = _toolbarIdentifiers()
+		
+		guard current != desired else { return }
+		
+		for i in stride(
+			from: toolbar.items.count - 1,
+			through: 0,
+			by: -1
+		) {
 			toolbar.removeItem(at: i)
 		}
-		for (i, id) in _toolbarIdentifiers().enumerated() {
-			toolbar.insertItem(withItemIdentifier: id, at: i)
+		
+		for (index, identifier) in desired.enumerated() {
+			toolbar.insertItem(
+				withItemIdentifier: identifier,
+				at: index
+			)
 		}
+	}
+	
+	@objc func _toolbarAction(_ sender: NSToolbarItem) {
+		_currentContentVC?.performToolbarAction(sender.itemIdentifier)
 	}
 }
 
 extension MainWindowController: MainSplitViewControllerDelegate {
-	func splitViewController(_ vc: MainSplitViewController, didSelect controller: NSViewController) {
+	func splitViewController(
+		_ vc: MainSplitViewController,
+		didSelect controller: NSViewController
+	) {
 		_currentContentVC = controller
-		_rebuildToolbar()
+		as? (NSViewController & ToolbarConfigurable)
+		
+		_rebuildToolbarIfNeeded()
 	}
 }
 
 extension MainWindowController: NSToolbarDelegate {
-	func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+	func toolbarDefaultItemIdentifiers(
+		_ toolbar: NSToolbar
+	) -> [NSToolbarItem.Identifier] {
 		_toolbarIdentifiers()
 	}
 	
-	func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-		[.toggleSidebar, .flexibleSpace, .mainSeparator, .innerSeparator, .plus, .share]
-	}
+	func toolbarAllowedItemIdentifiers(
+		_ toolbar: NSToolbar
+	) -> [NSToolbarItem.Identifier] {[
+		.toggleSidebar,
+		.flexibleSpace,
+		.mainSeparator,
+		.innerSeparator,
+		.plus,
+		.share,
+		.back
+	]}
 	
 	func toolbar(
 		_ toolbar: NSToolbar,
@@ -109,47 +129,83 @@ extension MainWindowController: NSToolbarDelegate {
 				dividerIndex: 0
 			)
 		case .innerSeparator:
-			guard let split = _currentContentVC as? VNSplitViewController else { return nil }
+			guard let splitVC = _currentContentVC as? VNSplitViewController else {
+				return nil
+			}
+			
 			return NSTrackingSeparatorToolbarItem(
 				identifier: itemIdentifier,
-				splitView: split.splitView,
+				splitView: splitVC.splitView,
 				dividerIndex: 0
 			)
 		case .plus:
-			let item = NSToolbarItem(itemIdentifier: .plus)
-			item.isBordered = true
-			item.label = "Add"
-			item.paletteLabel = "Add"
-			item.toolTip = "Add Source"
-			item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add")
-			item.target = self
-			item.action = #selector(_plusToolbarAction(_:))
-			return item
+			return _makeToolbarItem(
+				identifier: .plus,
+				label: "Add",
+				symbolName: "plus"
+			)
 		case .share:
-			let item = NSToolbarItem(itemIdentifier: .share)
-			item.isBordered = true
-			item.label = "Share"
-			item.paletteLabel = "Share"
-			item.toolTip = "Share"
-			item.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Share")
-			item.target = self
-			item.action = #selector(_shareToolbarAction(_:))
-			return item
+			return _makeToolbarItem(
+				identifier: .share,
+				label: "Share",
+				symbolName: "square.and.arrow.up"
+			)
+		case .back:
+			return _makeToolbarItem(
+				identifier: .back,
+				label: "Back",
+				symbolName: "chevron.left"
+			)
 		default:
 			return nil
 		}
 	}
-	
-	@objc private func _plusToolbarAction(_ sender: Any?) {}
-	
-	@objc private func _shareToolbarAction(_ sender: Any?) {}
-	
-	@objc protocol ShareableDetailViewController {
-		func handleShare(from sender: AnyObject)
+}
+
+extension MainWindowController: NSToolbarItemValidation {
+	func validateToolbarItem(
+		_ item: NSToolbarItem
+	) -> Bool {
+		_currentContentVC?
+			.validateToolbarItem(item.itemIdentifier)
+		?? false
 	}
 }
 
-extension NSToolbarItem.Identifier {
-	static let share = NSToolbarItem.Identifier("VNShareToolbarItem")
-	static let plus = NSToolbarItem.Identifier("VNPlusToolbarItem")
+private extension MainWindowController {
+	func _makeToolbarItem(
+		identifier: NSToolbarItem.Identifier,
+		label: String,
+		symbolName: String
+	) -> NSToolbarItem {
+		
+		let item = NSToolbarItem(itemIdentifier: identifier)
+		
+		item.isBordered = true
+		item.label = label
+		item.paletteLabel = label
+		item.toolTip = label
+		
+		item.image = NSImage(
+			systemSymbolName: symbolName,
+			accessibilityDescription: label
+		)
+		
+		item.target = self
+		item.action = #selector(_toolbarAction(_:))
+		
+		return item
+	}
+}
+
+protocol ToolbarConfigurable: AnyObject {
+	var toolbarIdentifiers: [NSToolbarItem.Identifier] { get }
+	
+	func performToolbarAction(
+		_ identifier: NSToolbarItem.Identifier
+	)
+	
+	func validateToolbarItem(
+		_ identifier: NSToolbarItem.Identifier
+	) -> Bool
 }

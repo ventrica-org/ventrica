@@ -10,9 +10,6 @@ import VentricaUI
 
 final class SourcesSplitViewController: VNSplitViewController {
 	private let _sourcesController = SourcesListViewController()
-
-	// Expose sourcesController for MainWindowController
-	var sourcesController: SourcesListViewController { _sourcesController }
 	
 	private let _noSourcesController: EmptyViewController = {
 		let v = EmptyViewController()
@@ -49,6 +46,37 @@ extension SourcesSplitViewController: SourcesListViewControllerDelegate {
 			setDetailViewController(PackagesCollectionViewController(titleText: repo.name, url: repo.url))
 		} else {
 			setDetailViewController(_noSourcesController)
+		}
+	}
+}
+
+extension SourcesSplitViewController: ToolbarConfigurable {
+	var toolbarIdentifiers: [NSToolbarItem.Identifier] {[
+		.toggleSidebar,
+		.mainSeparator,
+		.flexibleSpace,
+		.plus,
+		.innerSeparator,
+		.flexibleSpace,
+		.share
+	]}
+	
+	func performToolbarAction(
+		_ identifier: NSToolbarItem.Identifier,
+	) {
+		switch identifier {
+		case .share:	_sourcesController.shareItem()
+		case .plus:		_sourcesController.addItem()
+		default:		break
+		}
+	}
+	
+	func validateToolbarItem(
+		_ identifier: NSToolbarItem.Identifier
+	) -> Bool {
+		switch identifier {
+		case .share:	_sourcesController.selectedRepo != nil
+		default:		true
 		}
 	}
 }
