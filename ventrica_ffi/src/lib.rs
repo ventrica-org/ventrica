@@ -267,12 +267,13 @@ pub unsafe extern "C" fn ventrica_install(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_remove(
     names: *const *const c_char,
+    names_count: usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
     let mut pkg_names: Vec<String> = Vec::new();
     if !names.is_null() {
-        let slice = std::slice::from_raw_parts(names, 1);
+        let slice = std::slice::from_raw_parts(names, names_count);
         for &ptr in slice {
             match cstr_to_str(ptr, "name") {
                 Ok(n) => pkg_names.push(n.to_owned()),

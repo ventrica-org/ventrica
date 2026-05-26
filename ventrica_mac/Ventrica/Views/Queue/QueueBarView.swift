@@ -9,7 +9,7 @@ import VentricaKit
 // MARK: - VNQueueChipView
 private final class QueueChipView: NSView {
 	enum ChipStyle {
-		case install, dependency, uninstall
+		case install, uninstall
 	}
 	
 	private let _label: NSTextField = {
@@ -28,9 +28,6 @@ private final class QueueChipView: NSView {
 		case .install:
 			layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
 			_label.textColor = .controlAccentColor
-		case .dependency:
-			layer?.backgroundColor = NSColor.tertiaryLabelColor.withAlphaComponent(0.15).cgColor
-			_label.textColor = .secondaryLabelColor
 		case .uninstall:
 			layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.12).cgColor
 			_label.textColor = .systemRed
@@ -233,7 +230,7 @@ final class QueueBarView: NSView {
 		
 		_chipsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 		for item in installItems {
-			_chipsStack.addArrangedSubview(QueueChipView(name: item.name, style: item.isDependency ? .dependency : .install))
+			_chipsStack.addArrangedSubview(QueueChipView(name: item.name, style: .install))
 		}
 		for item in uninstallItems {
 			_chipsStack.addArrangedSubview(QueueChipView(name: item.name, style: .uninstall))
@@ -263,14 +260,16 @@ final class QueueBarView: NSView {
 	
 	@objc private func _applyTapped() {
 		InstallQueue.shared.applyAll { [weak self] success, errorMessage in
-			if !success, let msg = errorMessage {
-				let alert = NSAlert()
-				alert.messageText = "Operation Failed"
-				alert.informativeText = msg
-				alert.alertStyle = .warning
-				alert.runModal()
+			Task { @MainActor in
+				if !success, let msg = errorMessage {
+					let alert = NSAlert()
+					alert.messageText = "Operation Failed"
+					alert.informativeText = msg
+					alert.alertStyle = .warning
+					alert.runModal()
+				}
+				self?._refresh()
 			}
-			self?._refresh()
 		}
 	}
 	

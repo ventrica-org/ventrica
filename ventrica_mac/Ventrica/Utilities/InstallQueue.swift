@@ -7,33 +7,37 @@ import AppKit
 import VentricaKit
 
 struct QueueItem: Equatable {
-	let name: String
-	let version: String
-	let isDependency: Bool
-	
-	static func == (lhs: QueueItem, rhs: QueueItem) -> Bool { lhs.name == rhs.name }
+    let name: String
+    let version: String
+    // Dependency handling removed for now
+    static func == (lhs: QueueItem, rhs: QueueItem) -> Bool { lhs.name == rhs.name }
 }
 
 struct UninstallItem: Equatable {
-	let name: String
-	let version: String
-	let isDependency: Bool
-	
-	static func == (lhs: UninstallItem, rhs: UninstallItem) -> Bool { lhs.name == rhs.name }
+    let name: String
+    let version: String
+    // Dependency handling removed for now
+    static func == (lhs: UninstallItem, rhs: UninstallItem) -> Bool { lhs.name == rhs.name }
 }
 
+@MainActor
 final class InstallQueue {
 	static let shared = InstallQueue()
-	
-	private(set) var installItems: [QueueItem] = []
-	private(set) var uninstallItems: [UninstallItem] = []
-	private(set) var installedNames: Set<String> = []
-	private(set) var isApplying = false
-	
+
+	private let queue = DispatchQueue(label: "ventrica.installqueue.serial")
+
+	private var _installItems: [QueueItem] = []
+	private var _uninstallItems: [UninstallItem] = []
+	private var _installedNames: Set<String> = []
+	private var _isApplying = false
 	private var installedVersions: [String: String] = [:]
 	private var reverseDeps: [String: [String]] = [:]
 
-	var isEmpty: Bool { installItems.isEmpty && uninstallItems.isEmpty }
+	var installItems: [QueueItem] { queue.sync { _installItems } }
+	var uninstallItems: [UninstallItem] { queue.sync { _uninstallItems } }
+	var installedNames: Set<String> { queue.sync { _installedNames } }
+	var isApplying: Bool { _isApplying }
+	var isEmpty: Bool { queue.sync { _installItems.isEmpty && _uninstallItems.isEmpty } }
 
 	private init() {
 		_refreshInstalledNames()
@@ -45,104 +49,97 @@ final class InstallQueue {
 		)
 	}
 	
-	func isInstalled(_ name: String) -> Bool { installedNames.contains(name) }
-	func isQueued(_ name: String) -> Bool { installItems.contains { $0.name == name } }
-	func isQueuedForUninstall(_ name: String) -> Bool { uninstallItems.contains { $0.name == name } }
+	func isInstalled(_ name: String) -> Bool {
+		queue.sync { _installedNames.contains(name) }
+	}
+	func isQueued(_ name: String) -> Bool {
+		queue.sync { _installItems.contains { $0.name == name } }
+	}
+	func isQueuedForUninstall(_ name: String) -> Bool {
+		queue.sync { _uninstallItems.contains { $0.name == name } }
+	}
 	
 	func enqueue(_ package: Package) {
-		if isQueuedForUninstall(package.name) {
-			uninstallItems.removeAll { $0.name == package.name }
-			_postChange()
-			return
+		queue.sync {
+			if _uninstallItems.contains(where: { $0.name == package.name }) {
+				_uninstallItems.removeAll { $0.name == package.name }
+				DispatchQueue.main.async { self._postChange() }
+				return
+			}
+			guard !_installedNames.contains(package.name), !_installItems.contains(where: { $0.name == package.name }) else { return }
+			_installItems.append(QueueItem(name: package.name, version: package.version))
+			DispatchQueue.main.async { self._postChange() }
 		}
-		guard !isInstalled(package.name), !isQueued(package.name) else { return }
-		
-		installItems.append(QueueItem(name: package.name, version: package.version, isDependency: false))
-		for dep in package.runDeps where !isInstalled(dep) && !isQueued(dep) {
-			installItems.append(QueueItem(name: dep, version: "", isDependency: true))
-		}
-		_postChange()
 	}
 	
 	func enqueueUninstall(_ package: Package) {
-		if isQueued(package.name) {
-			installItems.removeAll { $0.name == package.name }
-			_postChange()
-			return
-		}
-		guard isInstalled(package.name), !isQueuedForUninstall(package.name) else { return }
-		
-		// BFS over the reverse-dep map to find every installed package that
-		// (transitively) depends on this one
-		var bfsQueue = [package.name]
-		var visited = Set([package.name])
-		var dependents: [UninstallItem] = []
-		while !bfsQueue.isEmpty {
-			let current = bfsQueue.removeFirst()
-			for dependent in reverseDeps[current, default: []] {
-				guard !visited.contains(dependent) else { continue }
-				visited.insert(dependent)
-				if isInstalled(dependent), !isQueuedForUninstall(dependent),
-				   let version = installedVersions[dependent] {
-					dependents.append(UninstallItem(name: dependent, version: version, isDependency: true))
-				}
-				bfsQueue.append(dependent)
+		queue.sync {
+			if _installItems.contains(where: { $0.name == package.name }) {
+				_installItems.removeAll { $0.name == package.name }
+				DispatchQueue.main.async { self._postChange() }
+				return
 			}
+			guard _installedNames.contains(package.name), !_uninstallItems.contains(where: { $0.name == package.name }) else { return }
+			_uninstallItems.append(UninstallItem(name: package.name, version: package.version))
+			DispatchQueue.main.async { self._postChange() }
 		}
-		dependents.reverse()
-		uninstallItems.append(contentsOf: dependents)
-		uninstallItems.append(UninstallItem(name: package.name, version: package.version, isDependency: false))
-		
-		_postChange()
 	}
 	
 	func dequeue(_ name: String) {
-		guard isQueued(name) else { return }
-		installItems.removeAll { $0.name == name }
-		_postChange()
+		queue.sync {
+			guard _installItems.contains(where: { $0.name == name }) else { return }
+			_installItems.removeAll { $0.name == name }
+			DispatchQueue.main.async { self._postChange() }
+		}
 	}
 	
 	func dequeueUninstall(_ name: String) {
-		guard isQueuedForUninstall(name) else { return }
-		uninstallItems.removeAll { $0.name == name }
-		_postChange()
+		queue.sync {
+			guard _uninstallItems.contains(where: { $0.name == name }) else { return }
+			_uninstallItems.removeAll { $0.name == name }
+			DispatchQueue.main.async { self._postChange() }
+		}
 	}
 	
 	func clear() {
-		guard !isEmpty else { return }
-		installItems.removeAll()
-		uninstallItems.removeAll()
-		_postChange()
+		queue.sync {
+			guard !_installItems.isEmpty || !_uninstallItems.isEmpty else { return }
+			_installItems.removeAll()
+			_uninstallItems.removeAll()
+			DispatchQueue.main.async { self._postChange() }
+		}
 	}
 	
 	// MARK: - Apply
 	
-	func applyAll(completion: @escaping (Bool, String?) -> Void) {
-		guard !isApplying else { return }
-		guard !isEmpty else { completion(true, nil); return }
-		
-		isApplying = true
-		_postChange()
-		
-		let toInstall = installItems.map { $0.name }
-		let toRemove  = uninstallItems.filter { !$0.isDependency }.map { ($0.name, $0.version) }
-		
-		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-			let (success, errorMessage) = Self._applySync(toInstall: toInstall, toRemove: toRemove)
-			
-			DispatchQueue.main.async { [weak self] in
-				NotificationCenter.default.post(
-					name: .shouldRefreshPackageList,
-					object: nil
-				)
-				
-				self?.isApplying = false
-				if success {
-					self?.installItems.removeAll()
-					self?.uninstallItems.removeAll()
+	func applyAll(completion: @Sendable @escaping (Bool, String?) -> Void) {
+		Task { @MainActor in
+			guard !self._isApplying else { return }
+			guard !self._installItems.isEmpty == false || !self._uninstallItems.isEmpty == false else {
+				completion(true, nil)
+				return
+			}
+			self._isApplying = true
+			self._postChange()
+
+			let toInstall = self._installItems.map { $0.name }
+			let toRemove  = self._uninstallItems.map { ($0.name, $0.version) }
+
+			Task.detached(priority: .userInitiated) { [toInstall, toRemove] in
+				let (success, errorMessage) = await Self._applySync(toInstall: toInstall, toRemove: toRemove)
+				await MainActor.run {
+					self._isApplying = false
+					if success {
+						self._installItems.removeAll()
+						self._uninstallItems.removeAll()
+					}
+					NotificationCenter.default.post(
+						name: .shouldRefreshPackageList,
+						object: nil
+					)
+					self._refreshInstalledNames()
+					completion(success, errorMessage)
 				}
-				self?._refreshInstalledNames()
-				completion(success, errorMessage)
 			}
 		}
 	}
@@ -158,14 +155,12 @@ final class InstallQueue {
 	}
 	
 	private func _refreshInstalledNames() {
-		DispatchQueue.global(qos: .utility).async { [weak self] in
-			let data = Self._fetchInstalledData()
-			DispatchQueue.main.async { [weak self] in
-				self?.installedNames = data.names
-				self?.installedVersions = data.versions
-				self?.reverseDeps = data.reverseDeps
-				self?._postChange()
-			}
+		Task { @MainActor in
+			let data = await Self._fetchInstalledData()
+			self._installedNames = data.names
+			self.installedVersions = data.versions
+			self.reverseDeps = data.reverseDeps
+			self._postChange()
 		}
 	}
 	
@@ -175,37 +170,35 @@ final class InstallQueue {
 		var reverseDeps: [String: [String]]
 	}
 	
-	private static func _fetchInstalledData() -> InstalledData {
-		var err: OpaquePointer? = nil
-		var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
-		var count: Int = 0
-		
-		guard ventrica_list_packages(&arr, &count, &err) == 0 else {
-			if let e = err { ventrica_error_free(e) }
-			return InstalledData(names: [], versions: [:], reverseDeps: [:])
-		}
-		
-		var names = Set<String>()
-		var versions: [String: String] = [:]
-		var reverseDeps: [String: [String]] = [:]
-		if let arr {
-			defer { ventrica_pkg_array_free(arr, UInt(count)) }
-			for i in 0..<count {
-				guard let pkg = arr[i] else { continue }
-				let name = String(cString: pkg.pointee.name)
-				let version = String(cString: pkg.pointee.version)
-				names.insert(name)
-				versions[name] = version
-				let depNames = cStringArrayToSwift(
-					pkg.pointee.run_dep_names,
-					maxCount: Int(clamping: pkg.pointee.run_dep_names_count)
-				)
-				for dep in depNames {
-					reverseDeps[dep, default: []].append(name)
+	@MainActor
+	private static func _fetchInstalledData() async -> InstalledData {
+		return await withCheckedContinuation { continuation in
+			DispatchQueue.global(qos: .utility).async {
+				var err: OpaquePointer? = nil
+				var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
+				var count: Int = 0
+				guard ventrica_list_packages(&arr, &count, &err) == 0 else {
+					if let e = err { ventrica_error_free(e) }
+					continuation.resume(returning: InstalledData(names: [], versions: [:], reverseDeps: [:]))
+					return
 				}
+				var names = Set<String>()
+				var versions: [String: String] = [:]
+				let reverseDeps: [String: [String]] = [:]
+				if let arr {
+					defer { ventrica_pkg_array_free(arr, UInt(bitPattern: count)) }
+					for i in 0..<count {
+						guard let pkg = arr[i] else { continue }
+						let name = String(cString: pkg.pointee.name)
+						let version = String(cString: pkg.pointee.version)
+						names.insert(name)
+						versions[name] = version
+						// Dependency handling removed for now
+					}
+				}
+				continuation.resume(returning: InstalledData(names: names, versions: versions, reverseDeps: reverseDeps))
 			}
 		}
-		return InstalledData(names: names, versions: versions, reverseDeps: reverseDeps)
 	}
 	
 	private static func _applySync(
@@ -214,13 +207,18 @@ final class InstallQueue {
 	) -> (Bool, String?) {
 		var err: OpaquePointer? = nil
 
-		for name in toInstall {
-			guard ventrica_install_name(name, &err) == 0 else {
+		if !toInstall.isEmpty {
+			let cArray: [UnsafePointer<CChar>?] = toInstall.map { strdup($0).map { UnsafePointer<CChar>($0) } } + [nil]
+			defer { for ptr in cArray where ptr != nil { free(UnsafeMutableRawPointer(mutating: ptr)) } }
+			guard ventrica_install(cArray, UInt(toInstall.count), &err) == 0 else {
 				return (false, _consumeError(&err))
 			}
 		}
-		for (name, version) in toRemove {
-			guard ventrica_remove(name, version, &err) == 0 else {
+		if !toRemove.isEmpty {
+			let removeNames = toRemove.map { $0.0 }
+			let cArray: [UnsafePointer<CChar>?] = removeNames.map { strdup($0).map { UnsafePointer<CChar>($0) } } + [nil]
+			defer { for ptr in cArray where ptr != nil { free(UnsafeMutableRawPointer(mutating: ptr)) } }
+			guard ventrica_remove(cArray, UInt(toRemove.count), &err) == 0 else {
 				return (false, _consumeError(&err))
 			}
 		}
