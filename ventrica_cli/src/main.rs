@@ -35,8 +35,10 @@ enum Cmd {
         generation: Option<u32>,
     },
     List {
-        #[arg(long)]
+        #[arg(long, conflicts_with = "repos")]
         gens: bool,
+        #[arg(long, conflicts_with = "gens")]
+        repos: bool,
     },
     Gc,
     #[command(subcommand)]
@@ -100,8 +102,22 @@ fn cmd_to_request(cmd: Cmd) -> Request {
         Cmd::Remove { names } => Request::Remove { names },
         Cmd::Upgrade { names } => Request::Upgrade { names },
         Cmd::Rollback { generation } => Request::Rollback { generation },
-        Cmd::List { gens: true } => Request::ListGenerations,
-        Cmd::List { gens: false } => Request::ListPackages,
+        Cmd::List {
+            gens: true,
+            repos: true,
+        } => Request::ListGenerations,
+        Cmd::List {
+            gens: false,
+            repos: true,
+        } => Request::ListRepos,
+        Cmd::List {
+            gens: false,
+            repos: false,
+        } => Request::ListPackages,
+        Cmd::List {
+            gens: true,
+            repos: false,
+        } => Request::ListGenerations,
         Cmd::Gc => Request::Gc,
         Cmd::Repo(RepoCmd::Add { url }) => Request::AddRepo { url },
         Cmd::Repo(RepoCmd::Update) => Request::UpdateRepos,
@@ -115,6 +131,7 @@ fn cmd_to_request(cmd: Cmd) -> Request {
 fn print_data(req: &Request, v: &Value) {
     match req {
         Request::ListPackages => print_packages(v),
+        Request::ListRepos => print_repos(v),
         Request::Search { .. } => print_search(v),
         _ => println!("{}", serde_json::to_string_pretty(v).unwrap_or_default()),
     }
@@ -160,5 +177,18 @@ fn print_search(v: &Value) {
                 println!("    deps: {}", ds.join(", "));
             }
         }
+    }
+}
+
+fn print_repos(v: &Value) {
+    let Some(arr) = v.as_array() else { return };
+    if arr.is_empty() {
+        println!("no repos added");
+        return;
+    }
+    for r in arr {
+        let url = r["url"].as_str().unwrap_or("");
+        let name = r["name"].as_str().unwrap_or("");
+        println!("{name}: {url}");
     }
 }
