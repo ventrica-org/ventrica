@@ -16,11 +16,9 @@ pub fn dispatch(req: &Request, build_user: Option<(u32, u32)>, send: &mut dyn Fn
     let mut fwd = |m: &Message| (send.borrow_mut())(m);
 
     let result: ventrica::Result<()> = match req {
-        Request::Install { recipes } => ops::install::install(recipes, &mut log),
+        Request::Install { names } => ops::install::install(names, &mut log),
 
-        Request::Remove { name, version } => {
-            ops::remove::remove(name, version.as_deref(), &mut log)
-        }
+        Request::Remove { names } => ops::remove::remove(names, &mut log),
 
         Request::Upgrade { names } => ops::upgrade::upgrade(names, &mut log),
 

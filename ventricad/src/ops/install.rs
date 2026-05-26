@@ -54,8 +54,8 @@ pub fn install(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
 
         let store_path = install_from_repo(base_url, entry)?;
 
-        if let Some(existing) = db.find_package(&entry.name, None)? {
-            db.remove_package(&existing.name, &existing.version)?;
+        if let Some(existing) = db.find_package(&entry.name)? {
+            db.remove_package(&existing.name)?;
         }
 
         let dep_store_paths = dep_store_paths(&repo_urls, &entry.run_deps);

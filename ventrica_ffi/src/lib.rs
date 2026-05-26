@@ -237,20 +237,25 @@ fn into_ptr_array<T>(mut v: Vec<*mut T>) -> (*mut *mut T, usize) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_install(
-    recipe_path: *const c_char,
+    names: *const *const c_char,
+    names_count: usize,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let recipe = match cstr_to_str(recipe_path, "recipe_path") {
-        Ok(r) => r.to_owned(),
-        Err(e) => {
-            set_error(out_err, e);
-            return -1;
+    let mut pkg_names: Vec<String> = Vec::new();
+    if !names.is_null() && names_count > 0 {
+        let slice = std::slice::from_raw_parts(names, names_count);
+        for &ptr in slice {
+            match cstr_to_str(ptr, "name") {
+                Ok(n) => pkg_names.push(n.to_owned()),
+                Err(e) => {
+                    set_error(out_err, e);
+                    return -1;
+                }
+            }
         }
-    };
-    match daemon_call(&Request::Install {
-        recipes: vec![recipe],
-    }) {
+    }
+    match daemon_call(&Request::Install { names: pkg_names }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);
@@ -264,38 +269,33 @@ pub unsafe extern "C" fn ventrica_install_name(
     name: *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
-    ventrica_install(name, out_err)
+    ventrica_install(&name, 1, out_err)
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_remove(
-    name: *const c_char,
-    version: *const c_char,
+    names: *const *const c_char,
     out_err: *mut *mut VentError,
 ) -> c_int {
     clear_error(out_err);
-    let name_str = match cstr_to_str(name, "name") {
-        Ok(n) => n.to_owned(),
-        Err(e) => {
-            set_error(out_err, e);
-            return -1;
-        }
-    };
-    let ver = if version.is_null() {
-        None
-    } else {
-        match cstr_to_str(version, "version") {
-            Ok(v) => Some(v.to_owned()),
-            Err(e) => {
-                set_error(out_err, e);
-                return -1;
+    let mut pkg_names: Vec<String> = Vec::new();
+    if !names.is_null() {
+        let slice = std::slice::from_raw_parts(names, 1);
+        for &ptr in slice {
+            match cstr_to_str(ptr, "name") {
+                Ok(n) => pkg_names.push(n.to_owned()),
+                Err(e) => {
+                    set_error(out_err, e);
+                    return -1;
+                }
             }
         }
-    };
-    match daemon_call(&Request::Remove {
-        name: name_str,
-        version: ver,
-    }) {
+    } else {
+        set_error(out_err, "name must not be null");
+        return -1;
+    }
+
+    match daemon_call(&Request::Remove { names: pkg_names }) {
         Ok(_) => 0,
         Err(e) => {
             set_error(out_err, e);

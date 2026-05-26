@@ -6,39 +6,20 @@ pub const SOCKET_ENV: &str = "VENTRICA_SOCKET";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 pub enum Request {
-    Install {
-        recipes: Vec<String>,
-    },
-    Remove {
-        name: String,
-        version: Option<String>,
-    },
-    Upgrade {
-        names: Vec<String>,
-    },
-    Rollback {
-        generation: Option<u32>,
-    },
+    Install { names: Vec<String> },
+    Remove { names: Vec<String> },
+    Upgrade { names: Vec<String> },
+    Rollback { generation: Option<u32> },
     ListPackages,
     ListGenerations,
     Gc,
-    AddRepo {
-        url: String,
-    },
+    AddRepo { url: String },
     UpdateRepos,
-    Search {
-        query: String,
-    },
-    BuildRepo {
-        repo_dir: String,
-    },
+    Search { query: String },
+    BuildRepo { repo_dir: String },
     ListRepos,
-    RemoveRepo {
-        url: String,
-    },
-    ListRepoPackages {
-        url: String,
-    },
+    RemoveRepo { url: String },
+    ListRepoPackages { url: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

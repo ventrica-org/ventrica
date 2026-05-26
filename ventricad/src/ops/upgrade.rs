@@ -46,7 +46,7 @@ pub fn upgrade(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
 
         let store_path = install_from_repo(&candidate.repo_url, &candidate.entry)?;
 
-        db.remove_package(&candidate.name, &candidate.installed_version)?;
+        db.remove_package(&candidate.name)?;
 
         let dep_store_paths = dep_store_paths(&repo_urls, &candidate.entry.run_deps);
 
@@ -68,7 +68,6 @@ pub fn upgrade(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
         ));
     }
 
-    // Activate a single new generation for all upgraded packages.
     let all_pkgs = db.list_packages()?;
     let desc = format!(
         "upgrade {}",

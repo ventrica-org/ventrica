@@ -141,40 +141,25 @@ impl Database {
         })
     }
 
-    pub fn remove_package(&self, name: &str, version: &str) -> Result<()> {
-        let n = self.conn.execute(
-            "DELETE FROM packages WHERE name = ?1 AND version = ?2",
-            params![name, version],
-        )?;
+    pub fn remove_package(&self, name: &str) -> Result<()> {
+        let n = self
+            .conn
+            .execute("DELETE FROM packages WHERE name = ?1", params![name])?;
         if n == 0 {
-            return Err(Error::PackageVersionNotFound {
-                name: name.into(),
-                version: version.into(),
-            });
+            return Err(Error::PackageNotFound { name: name.into() });
         }
         Ok(())
     }
 
-    pub fn find_package(&self, name: &str, version: Option<&str>) -> Result<Option<PackageRecord>> {
-        let row = if let Some(ver) = version {
-            self.conn
-                .query_row(
-                    "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
-                     FROM packages WHERE name = ?1 AND version = ?2",
-                    params![name, ver],
-                    row_to_package,
-                )
-                .optional()?
-        } else {
-            self.conn
-                .query_row(
-                    "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
-                     FROM packages WHERE name = ?1 LIMIT 1",
-                    params![name],
-                    row_to_package,
-                )
-                .optional()?
-        };
+    pub fn find_package(&self, name: &str) -> Result<Option<PackageRecord>> {
+        let row = self.conn
+            .query_row(
+                "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
+                    FROM packages WHERE name = ?1 LIMIT 1",
+                params![name],
+                row_to_package,
+            )
+            .optional()?;
         Ok(row)
     }
 

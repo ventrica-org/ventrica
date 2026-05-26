@@ -21,14 +21,14 @@ struct Cli {
 enum Cmd {
     Install {
         #[arg(required = true)]
-        packages: Vec<String>,
+        names: Vec<String>,
     },
     Remove {
-        name: String,
-        #[arg(long, short)]
-        version: Option<String>,
+        #[arg(required = true)]
+        names: Vec<String>,
     },
     Upgrade {
+        #[arg(required = true)]
         names: Vec<String>,
     },
     Rollback {
@@ -96,8 +96,8 @@ fn run(cmd: Cmd) -> std::io::Result<bool> {
 
 fn cmd_to_request(cmd: Cmd) -> Request {
     match cmd {
-        Cmd::Install { packages } => Request::Install { recipes: packages },
-        Cmd::Remove { name, version } => Request::Remove { name, version },
+        Cmd::Install { names } => Request::Install { names },
+        Cmd::Remove { names } => Request::Remove { names },
         Cmd::Upgrade { names } => Request::Upgrade { names },
         Cmd::Rollback { generation } => Request::Rollback { generation },
         Cmd::List { gens: true } => Request::ListGenerations,
