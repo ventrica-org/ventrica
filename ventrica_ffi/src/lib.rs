@@ -265,14 +265,6 @@ pub unsafe extern "C" fn ventrica_install(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ventrica_install_name(
-    name: *const c_char,
-    out_err: *mut *mut VentError,
-) -> c_int {
-    ventrica_install(&name, 1, out_err)
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_remove(
     names: *const *const c_char,
     out_err: *mut *mut VentError,
