@@ -2,29 +2,20 @@ use ventrica::error::Result;
 use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo};
 use ventrica::store::{STORE_DIR, db::Database};
 
-pub fn ensure_dep_installed(
-    dep_name: &str,
-    repo_urls: &[String],
-    log: &mut dyn FnMut(&str),
-) -> Result<()> {
+pub fn ensure_dep_installed(dep_name: &str, repo_urls: &[String]) -> Result<()> {
     let Some((base_url, entry)) = find_in_repos(dep_name, repo_urls)? else {
-        log(&format!(
-            "dependency '{dep_name}' not found in any repo, skipping"
-        ));
+        log::info!("dependency '{dep_name}' not found in any repo, skipping");
         return Ok(());
     };
 
     for transitive in entry.run_deps.clone() {
-        ensure_dep_installed(&transitive, repo_urls, log)?;
+        ensure_dep_installed(&transitive, repo_urls)?;
     }
 
     let store_path = std::path::Path::new(STORE_DIR).join(&entry.store_name);
 
     if !store_path.exists() {
-        log(&format!(
-            "fetching dependency {} {}...",
-            entry.name, entry.version
-        ));
+        log::info!("fetching dependency {} {}...", entry.name, entry.version);
         install_from_repo(&base_url, &entry)?;
     }
 

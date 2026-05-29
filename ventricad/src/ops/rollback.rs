@@ -1,7 +1,7 @@
 use ventrica::error::{Error, Result};
 use ventrica::store::{db::Database, live};
 
-pub fn rollback(target: Option<u32>, log: &mut dyn FnMut(&str)) -> Result<()> {
+pub fn rollback(target: Option<u32>) -> Result<()> {
     let db = Database::open()?;
     let current = db.current_generation_number()?;
     if current == 0 {
@@ -14,10 +14,8 @@ pub fn rollback(target: Option<u32>, log: &mut dyn FnMut(&str)) -> Result<()> {
         None => return Err(Error::GenerationNotFound(0)),
     };
 
-    log(&format!(
-        "rolling back generation {current} -> {target_gen}..."
-    ));
+    log::info!("rolling back generation {current} -> {target_gen}...");
     live::rollback(&db, target_gen)?;
-    log(&format!("active generation is now {target_gen}"));
+    log::info!("active generation is now {target_gen}");
     Ok(())
 }

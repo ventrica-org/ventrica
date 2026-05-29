@@ -9,14 +9,12 @@ import VentricaKit
 struct QueueItem: Equatable {
     let name: String
     let version: String
-    // Dependency handling removed for now
     static func == (lhs: QueueItem, rhs: QueueItem) -> Bool { lhs.name == rhs.name }
 }
 
 struct UninstallItem: Equatable {
     let name: String
     let version: String
-    // Dependency handling removed for now
     static func == (lhs: UninstallItem, rhs: UninstallItem) -> Bool { lhs.name == rhs.name }
 }
 
@@ -66,7 +64,14 @@ final class InstallQueue {
 				DispatchQueue.main.async { self._postChange() }
 				return
 			}
-			guard !_installedNames.contains(package.name), !_installItems.contains(where: { $0.name == package.name }) else { return }
+			
+			guard
+				!_installedNames.contains(package.name),
+				!_installItems.contains(where: { $0.name == package.name })
+			else {
+				return
+			}
+			
 			_installItems.append(QueueItem(name: package.name, version: package.version))
 			DispatchQueue.main.async { self._postChange() }
 		}
@@ -79,7 +84,14 @@ final class InstallQueue {
 				DispatchQueue.main.async { self._postChange() }
 				return
 			}
-			guard _installedNames.contains(package.name), !_uninstallItems.contains(where: { $0.name == package.name }) else { return }
+			
+			guard
+				_installedNames.contains(package.name),
+				!_uninstallItems.contains(where: { $0.name == package.name })
+			else {
+				return
+			}
+			
 			_uninstallItems.append(UninstallItem(name: package.name, version: package.version))
 			DispatchQueue.main.async { self._postChange() }
 		}
@@ -103,7 +115,13 @@ final class InstallQueue {
 	
 	func clear() {
 		queue.sync {
-			guard !_installItems.isEmpty || !_uninstallItems.isEmpty else { return }
+			guard
+				!_installItems.isEmpty ||
+				!_uninstallItems.isEmpty
+			else {
+				return
+			}
+			
 			_installItems.removeAll()
 			_uninstallItems.removeAll()
 			DispatchQueue.main.async { self._postChange() }
@@ -115,10 +133,15 @@ final class InstallQueue {
 	func applyAll(completion: @Sendable @escaping (Bool, String?) -> Void) {
 		Task { @MainActor in
 			guard !self._isApplying else { return }
-			guard !self._installItems.isEmpty == false || !self._uninstallItems.isEmpty == false else {
+			
+			guard
+				!self._installItems.isEmpty == false ||
+				!self._uninstallItems.isEmpty == false
+			else {
 				completion(true, nil)
 				return
 			}
+			
 			self._isApplying = true
 			self._postChange()
 
@@ -177,14 +200,17 @@ final class InstallQueue {
 				var err: OpaquePointer? = nil
 				var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
 				var count: Int = 0
+				
 				guard ventrica_list_packages(&arr, &count, &err) == 0 else {
 					if let e = err { ventrica_error_free(e) }
 					continuation.resume(returning: InstalledData(names: [], versions: [:], reverseDeps: [:]))
 					return
 				}
+				
 				var names = Set<String>()
 				var versions: [String: String] = [:]
 				let reverseDeps: [String: [String]] = [:]
+				
 				if let arr {
 					defer { ventrica_pkg_array_free(arr, UInt(bitPattern: count)) }
 					for i in 0..<count {
@@ -193,10 +219,14 @@ final class InstallQueue {
 						let version = String(cString: pkg.pointee.version)
 						names.insert(name)
 						versions[name] = version
-						// Dependency handling removed for now
 					}
 				}
-				continuation.resume(returning: InstalledData(names: names, versions: versions, reverseDeps: reverseDeps))
+				
+				continuation.resume(returning: InstalledData(
+					names: names,
+					versions: versions,
+					reverseDeps: reverseDeps
+				))
 			}
 		}
 	}

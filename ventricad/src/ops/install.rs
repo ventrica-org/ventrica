@@ -4,7 +4,7 @@ use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
 
-pub fn install(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
+pub fn install(names: &[String]) -> Result<()> {
     if names.is_empty() {
         return Ok(());
     }
@@ -44,13 +44,13 @@ pub fn install(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
 
     for (_, entry) in &resolved {
         for dep in entry.run_deps.clone() {
-            ensure_dep_installed(&dep, &repo_urls, log)?;
+            ensure_dep_installed(&dep, &repo_urls)?;
         }
     }
 
     let mut new_records = Vec::new();
     for (base_url, entry) in &resolved {
-        log(&format!("installing {} {}...", entry.name, entry.version));
+        log::info!("installing {} {}...", entry.name, entry.version);
 
         let store_path = install_from_repo(base_url, entry)?;
 
@@ -92,7 +92,7 @@ pub fn install(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
     live::activate(&db, &all_pkgs, Some(&desc))?;
 
     for (_, entry) in &resolved {
-        log(&format!("installed {} {}", entry.name, entry.version));
+        log::info!("installed {} {}", entry.name, entry.version);
     }
     Ok(())
 }

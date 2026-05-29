@@ -12,17 +12,16 @@ pub fn dispatch(req: &Request, build_user: Option<(u32, u32)>, send: &mut dyn Fn
     let send = std::cell::RefCell::new(send);
     let mut sink = |s: &str| (send.borrow_mut())(&Message::Log(s.to_owned()));
     let _log_guard = crate::logging::set_thread_sink(&mut sink);
-    let mut log = |s: &str| log::info!("{s}");
     let mut fwd = |m: &Message| (send.borrow_mut())(m);
 
     let result: ventrica::Result<()> = match req {
-        Request::Install { names } => ops::install::install(names, &mut log),
+        Request::Install { names } => ops::install::install(names),
 
-        Request::Remove { names } => ops::remove::remove(names, &mut log),
+        Request::Remove { names } => ops::remove::remove(names),
 
-        Request::Upgrade { names } => ops::upgrade::upgrade(names, &mut log),
+        Request::Upgrade { names } => ops::upgrade::upgrade(names),
 
-        Request::Rollback { generation } => ops::rollback::rollback(*generation, &mut log),
+        Request::Rollback { generation } => ops::rollback::rollback(*generation),
 
         Request::ListPackages => ops::list::list_packages().and_then(|v| emit_data(v, &mut fwd)),
         Request::ListGenerations => {
@@ -30,11 +29,11 @@ pub fn dispatch(req: &Request, build_user: Option<(u32, u32)>, send: &mut dyn Fn
         }
         Request::ListRepos => ops::list::list_repos().and_then(|v| emit_data(v, &mut fwd)),
 
-        Request::Gc => ops::gc::gc(&mut log),
+        Request::Gc => ops::gc::gc(),
 
-        Request::AddRepo { url } => ops::add_repo::add_repo(url, &mut log).map(|_| ()),
-        Request::RemoveRepo { url } => ops::repos::remove_repo(url, &mut log),
-        Request::UpdateRepos => ops::update::update_repos(&mut log),
+        Request::AddRepo { url } => ops::add_repo::add_repo(url).map(|_| ()),
+        Request::RemoveRepo { url } => ops::repos::remove_repo(url),
+        Request::UpdateRepos => ops::update::update_repos(),
 
         Request::Search { query } => {
             let r = ops::search::search(query);
@@ -49,7 +48,7 @@ pub fn dispatch(req: &Request, build_user: Option<(u32, u32)>, send: &mut dyn Fn
         }
 
         Request::BuildRepo { repo_dir } => {
-            ops::build_repo::build_repo(std::path::Path::new(repo_dir), &mut log, build_user)
+            ops::build_repo::build_repo(std::path::Path::new(repo_dir), build_user)
         }
 
         Request::ListRepoPackages { url } => {

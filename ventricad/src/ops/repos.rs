@@ -1,10 +1,10 @@
 use ventrica::repo::{PackageEntry, fetch_manifest_cached};
 use ventrica::store::db::Database;
 
-pub fn remove_repo(url: &str, log: &mut dyn FnMut(&str)) -> ventrica::Result<()> {
+pub fn remove_repo(url: &str) -> ventrica::Result<()> {
     let db = Database::open()?;
     db.remove_repo(url)?;
-    log(&format!("removed repository '{url}'"));
+    log::info!("removed repository '{url}'");
     Ok(())
 }
 

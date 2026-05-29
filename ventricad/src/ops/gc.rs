@@ -3,7 +3,7 @@ use std::path::Path;
 
 use ventrica::store::{GENERATIONS_DIR, STORE_DIR, db::Database, unseal};
 
-pub fn gc(log: &mut dyn FnMut(&str)) -> ventrica::Result<()> {
+pub fn gc() -> ventrica::Result<()> {
     let db = Database::open()?;
 
     let current = db.current_generation_number()?;
@@ -17,7 +17,7 @@ pub fn gc(log: &mut dyn FnMut(&str)) -> ventrica::Result<()> {
             std::fs::remove_dir_all(&gen_dir)?;
         }
         db.delete_generation(generation.number)?;
-        log(&format!("removed generation {}", generation.number));
+        log::info!("removed generation {}", generation.number);
     }
 
     let mut referenced: HashSet<String> = HashSet::new();
@@ -48,10 +48,10 @@ pub fn gc(log: &mut dyn FnMut(&str)) -> ventrica::Result<()> {
         unseal(&path)?;
         std::fs::remove_dir_all(&path)?;
         freed += size;
-        log(&format!("removed {key}"));
+        log::info!("removed {key}");
     }
 
-    log(&format!("freed {:.1} MiB", freed as f64 / 1_048_576.0));
+    log::info!("freed {:.1} MiB", freed as f64 / 1_048_576.0);
     Ok(())
 }
 

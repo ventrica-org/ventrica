@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS current_generation (
 );
 INSERT OR IGNORE INTO current_generation (singleton, generation_number) VALUES (1, 0);
 
--- Registered remote repositories.
 CREATE TABLE IF NOT EXISTS repositories (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL,

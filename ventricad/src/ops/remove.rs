@@ -4,7 +4,7 @@ use ventrica::PackageRecord;
 use ventrica::error::{Error, Result};
 use ventrica::store::{db::Database, live};
 
-pub fn remove(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
+pub fn remove(names: &[String]) -> Result<()> {
     if names.is_empty() {
         return Ok(());
     }
@@ -56,9 +56,9 @@ pub fn remove(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
     }
 
     for p in &to_remove {
-        log(&format!("removing {} {}...", p.name, p.version));
+        log::info!("removing {} {}...", p.name, p.version);
         db.remove_package(&p.name)?;
-        log(&format!("removed {} {}", p.name, p.version));
+        log::info!("removed {} {}", p.name, p.version);
     }
 
     let remaining = db.list_packages()?;

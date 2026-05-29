@@ -4,12 +4,12 @@ use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
 
-pub fn upgrade(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
+pub fn upgrade(names: &[String]) -> Result<()> {
     let db = Database::open()?;
     let repos = db.list_repos()?;
 
     if repos.is_empty() {
-        log("no repositories configured - use `repo add`");
+        log::info!("no repositories configured - use `repo add`");
         return Ok(());
     }
 
@@ -23,25 +23,27 @@ pub fn upgrade(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
         .collect();
 
     if installed.is_empty() {
-        log("no matching packages installed");
+        log::info!("no matching packages installed");
         return Ok(());
     }
 
     let candidates = check_updates(&installed, &repo_urls)?;
 
     if candidates.is_empty() {
-        log("all packages are up to date");
+        log::info!("all packages are up to date");
         return Ok(());
     }
 
     for candidate in &candidates {
-        log(&format!(
+        log::info!(
             "upgrading {} {} -> {}...",
-            candidate.name, candidate.installed_version, candidate.available_version
-        ));
+            candidate.name,
+            candidate.installed_version,
+            candidate.available_version
+        );
 
         for dep in &candidate.entry.run_deps {
-            ensure_dep_installed(dep, &repo_urls, log)?;
+            ensure_dep_installed(dep, &repo_urls)?;
         }
 
         let store_path = install_from_repo(&candidate.repo_url, &candidate.entry)?;
@@ -62,10 +64,12 @@ pub fn upgrade(names: &[String], log: &mut dyn FnMut(&str)) -> Result<()> {
             &dep_store_paths,
         )?;
 
-        log(&format!(
+        log::info!(
             "upgraded {} {} -> {}",
-            candidate.name, candidate.installed_version, candidate.available_version
-        ));
+            candidate.name,
+            candidate.installed_version,
+            candidate.available_version
+        );
     }
 
     let all_pkgs = db.list_packages()?;
