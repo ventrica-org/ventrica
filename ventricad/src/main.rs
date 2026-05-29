@@ -3,7 +3,9 @@ mod logging;
 mod server;
 
 use std::path::PathBuf;
+use std::process;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 fn main() {
     logging::init();
@@ -19,24 +21,24 @@ fn main() {
         for &sig in &[libc::SIGINT, libc::SIGTERM] {
             libc::signal(sig, handle_signal as libc::sighandler_t);
         }
-        SOCKET_PATH_PTR.store(socket_ptr, std::sync::atomic::Ordering::SeqCst);
+        SOCKET_PATH_PTR.store(socket_ptr, Ordering::SeqCst);
     }
 
     if let Err(e) = server::run(&socket_path) {
         eprintln!("ventricad: fatal: {e}");
-        std::process::exit(1);
+        process::exit(1);
     }
 }
 
-static SOCKET_PATH_PTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+static SOCKET_PATH_PTR: AtomicUsize = AtomicUsize::new(0);
 
 extern "C" fn handle_signal(_: libc::c_int) {
-    let ptr = SOCKET_PATH_PTR.load(std::sync::atomic::Ordering::SeqCst);
+    let ptr = SOCKET_PATH_PTR.load(Ordering::SeqCst);
     if ptr != 0 {
         let path = unsafe { &*(ptr as *const PathBuf) };
         if path.exists() {
             let _ = std::fs::remove_file(path);
         }
     }
-    std::process::exit(0);
+    process::exit(0);
 }
