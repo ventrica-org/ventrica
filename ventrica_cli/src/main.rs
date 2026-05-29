@@ -82,8 +82,6 @@ fn run(cmd: Cmd) -> std::io::Result<bool> {
     let mut had_error = false;
 
     client.send(&req, |msg| match msg {
-        Message::Log(s) => println!("{s}"),
-        Message::Warn(s) => eprintln!("{s}"),
         Message::Success(_) => {}
         Message::Error(s) => {
             eprintln!("error: {s}");

@@ -25,8 +25,6 @@ pub enum Request {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum Message {
-    Log(String),
-    Warn(String),
     Success(String),
     Error(String),
     Data(serde_json::Value),
@@ -34,12 +32,6 @@ pub enum Message {
 }
 
 impl Message {
-    pub fn log(s: impl Into<String>) -> Self {
-        Self::Log(s.into())
-    }
-    pub fn warn(s: impl Into<String>) -> Self {
-        Self::Warn(s.into())
-    }
     pub fn success(s: impl Into<String>) -> Self {
         Self::Success(s.into())
     }
