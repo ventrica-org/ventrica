@@ -27,6 +27,7 @@ pub enum Request {
 pub enum Message {
     Success(String),
     Error(String),
+    Log(String),
     Data(serde_json::Value),
     Done,
 }
@@ -37,5 +38,8 @@ impl Message {
     }
     pub fn error(s: impl Into<String>) -> Self {
         Self::Error(s.into())
+    }
+    pub fn log(s: impl Into<String>) -> Self {
+        Self::Log(s.into())
     }
 }

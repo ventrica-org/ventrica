@@ -87,6 +87,7 @@ fn run(cmd: Cmd) -> std::io::Result<bool> {
             eprintln!("error: {s}");
             had_error = true;
         }
+        Message::Log(_) => {}
         Message::Data(v) => print_data(&req, &v),
         Message::Done => {}
     })?;
