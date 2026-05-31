@@ -125,7 +125,15 @@ final class MainSplitViewController: NSSplitViewController {
 		
 		_sidebarScrollView.documentView = _sidebarOutlineView
 		
-		[_sidebarScrollView, _sidebarSearchField].forEach {
+		let addRepoButton = NSButton(
+			title: "Add Repo",
+			image: .init(systemSymbolName: "plus.circle", accessibilityDescription: nil)!,
+			target: self,
+			action: #selector(_addRepoAction(_:))
+		)
+		addRepoButton.isBordered = false
+		
+		[_sidebarScrollView, _sidebarSearchField, addRepoButton].forEach {
 			$0.translatesAutoresizingMaskIntoConstraints = false
 			_viewBlur.addSubview($0)
 		}
@@ -140,7 +148,10 @@ final class MainSplitViewController: NSSplitViewController {
 			_sidebarScrollView.topAnchor.constraint(equalTo: _sidebarSearchField.bottomAnchor, constant: 16),
 			_sidebarScrollView.leadingAnchor.constraint(equalTo: _viewBlur.leadingAnchor),
 			_sidebarScrollView.trailingAnchor.constraint(equalTo: _viewBlur.trailingAnchor),
-			_sidebarScrollView.bottomAnchor.constraint(equalTo: _viewBlur.bottomAnchor),
+			_sidebarScrollView.bottomAnchor.constraint(equalTo: addRepoButton.topAnchor),
+			
+			addRepoButton.leadingAnchor.constraint(equalTo: _viewBlur.leadingAnchor, constant: 9.4),
+			addRepoButton.bottomAnchor.constraint(equalTo: _viewBlur.bottomAnchor, constant: -9.4),
 		])
 		
 		let sidebarVC = NSViewController()
@@ -159,7 +170,17 @@ final class MainSplitViewController: NSSplitViewController {
 			addSplitViewItem($0)
 		}
 		
+		_setupListeners()
+	}
+	
+	private func _setupListeners() {
 		_load()
+		
+		NotificationCenter.default.addObservers(
+			[NSApplication.didBecomeActiveNotification, .shouldRefreshSourcesList],
+			observer: self,
+			selector: #selector(_load)
+		)
 	}
 	
 	@objc private func _load() {
@@ -220,6 +241,42 @@ final class MainSplitViewController: NSSplitViewController {
 			self,
 			didSelect: controller
 		)
+	}
+	
+	@objc private func _addRepoAction(_ sender: NSButton?) {
+		let alert = NSAlert()
+		alert.messageText = "Add Repository"
+		alert.informativeText = "Enter the repository URL or name."
+
+		alert.addButton(withTitle: "Add")
+		alert.addButton(withTitle: "Cancel")
+
+		let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+		textField.placeholderString = "Repository URL"
+
+		alert.accessoryView = textField
+
+		guard let window = self.view.window else { return }
+
+		alert.beginSheetModal(for: window) { response in
+			if response == .alertFirstButtonReturn {
+				let value = textField.stringValue
+				var err: OpaquePointer? = nil
+				
+				guard ventrica_add_repo(value, &err) == 0 else {
+					if let e = err {
+						print(String(cString: ventrica_error_message(e)))
+						ventrica_error_free(e)
+					}
+					return
+				}
+				
+				NotificationCenter.default.post(
+					name: .shouldRefreshSourcesList,
+					object: nil
+				)
+			}
+		}
 	}
 }
 
