@@ -225,6 +225,14 @@ extension PackagesListViewController: NSTableViewDataSource, NSTableViewDelegate
 		}
 	}
 	
+	func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+		if case .section = _rows[row] {
+			false
+		} else {
+			true
+		}
+	}
+	
 	func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
 		switch _rows[row] {
 		case .section(let title):
