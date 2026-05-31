@@ -7,6 +7,7 @@
 
 
 import AppKit
+import VentricaUI
 
 final class MainSplitViewRowView: NSTableRowView {
 	override var isEmphasized: Bool { get { false } set {} }
@@ -63,5 +64,12 @@ final class MainSplitViewCellView: NSTableCellView {
 		)
 		
 		_titleLabel.stringValue = section.title
+	}
+	
+	func configure(with repo: Repo) {
+		_iconView.image = VNCategoryIdentifier("sources").sectionIcon.image()
+		_iconView.wantsLayer = true
+		_iconView.layer?.cornerRadius = 5
+		_titleLabel.stringValue = repo.name
 	}
 }

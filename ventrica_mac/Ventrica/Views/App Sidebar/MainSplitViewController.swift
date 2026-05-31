@@ -7,27 +7,26 @@
 
 import AppKit
 import VentricaUI
+import VentricaKit
 
 enum SidebarSection: CaseIterable {
-	case discover, recents, sources, packages, updates
+	case discover, recents, packages, updates
 	
 	var title: String {
 		switch self {
-		case .discover:	.localized("Discover")
-		case .recents:	.localized("News")
-		case .sources:	.localized("Sources")
-		case .packages:	.localized("Packages")
-		case .updates:	.localized("Updates")
+		case .discover: .localized("Discover")
+		case .recents: .localized("News")
+		case .packages: .localized("Packages")
+		case .updates: .localized("Updates")
 		}
 	}
 	
 	var symbol: String {
 		switch self {
-		case .discover:	"star"
-		case .recents:	"text.book.closed"
-		case .sources:	"globe.desk"
-		case .packages:	"shippingbox"
-		case .updates:	"square.and.arrow.down"
+		case .discover: "star"
+		case .recents: "text.book.closed"
+		case .packages: "shippingbox"
+		case .updates: "square.and.arrow.down"
 		}
 	}
 	
@@ -37,16 +36,32 @@ enum SidebarSection: CaseIterable {
 			let vc = NSViewController()
 			vc.title = self.title
 			return vc
-		case .sources:
-			let vc = SourcesSplitViewController()
-			vc.title = self.title
-			return vc
+			
 		case .packages:
-			let vc = PackagesSplitViewController(titleText: self.title, url: nil)
+			let vc = PackagesSplitViewController(
+				titleText: self.title,
+				url: nil
+			)
 			vc.title = self.title
 			return vc
 		}
 	}
+}
+
+enum SidebarSectionType: Int, CaseIterable {
+	case repositories
+	
+	var title: String {
+		switch self {
+		case .repositories: "My Repos"
+		}
+	}
+}
+
+enum SidebarItem {
+	case section(SidebarSectionType)
+	case navigation(SidebarSection)
+	case repo(Repo)
 }
 
 final class MainSplitViewController: NSSplitViewController {
@@ -90,6 +105,8 @@ final class MainSplitViewController: NSSplitViewController {
 	}()
 	
 	private var contentControllers: [SidebarSection: NSViewController] = [:]
+	private var _rows: [SidebarItem] = []
+	private var _repoData: [Repo] = []
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -119,6 +136,7 @@ final class MainSplitViewController: NSSplitViewController {
 			_sidebarSearchField.topAnchor.constraint(equalTo: _viewBlur.safeAreaLayoutGuide.topAnchor),
 			_sidebarSearchField.leadingAnchor.constraint(equalTo: _viewBlur.leadingAnchor, constant: 9.4),
 			_sidebarSearchField.trailingAnchor.constraint(equalTo: _viewBlur.trailingAnchor, constant: -9.4),
+			
 			_sidebarScrollView.topAnchor.constraint(equalTo: _sidebarSearchField.bottomAnchor, constant: 16),
 			_sidebarScrollView.leadingAnchor.constraint(equalTo: _viewBlur.leadingAnchor),
 			_sidebarScrollView.trailingAnchor.constraint(equalTo: _viewBlur.trailingAnchor),
@@ -128,7 +146,10 @@ final class MainSplitViewController: NSSplitViewController {
 		let sidebarVC = NSViewController()
 		sidebarVC.view = _viewBlur
 		
-		let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebarVC)
+		let sidebarItem = NSSplitViewItem(
+			sidebarWithViewController: sidebarVC
+		)
+		
 		sidebarItem.minimumThickness = 220
 		sidebarItem.maximumThickness = 220
 		sidebarItem.canCollapse = true
@@ -137,28 +158,82 @@ final class MainSplitViewController: NSSplitViewController {
 		[sidebarItem, NSSplitViewItem(viewController: _container)].forEach {
 			addSplitViewItem($0)
 		}
-
-		_sidebarOutlineView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+		
+		_load()
 	}
 	
-	private func showContentController(_ controller: NSViewController) {
+	@objc private func _load() {
+		var repos: [Repo] = []
+		
+		var err: OpaquePointer? = nil
+		var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepo>?>? = nil
+		var count: Int = 0
+		
+		guard ventrica_list_repos(&arr, &count, &err) == 0 else {
+			if let e = err {
+				print(String(cString: ventrica_error_message(e)))
+				ventrica_error_free(e)
+			}
+			return
+		}
+		
+		if let arr {
+			defer { ventrica_repo_array_free(arr, UInt(count)) }
+			for i in 0..<count {
+				guard let repo = arr[i] else { continue }
+				repos.append(Repo(repo: repo.pointee))
+			}
+		}
+		
+		_repoData = repos
+		_rebuildRows()
+	}
+	
+	private func _rebuildRows() {
+		_rows.removeAll()
+		_rows.append(.navigation(.discover))
+		_rows.append(.navigation(.recents))
+		_rows.append(.navigation(.packages))
+		_rows.append(.navigation(.updates))
+		
+		if !_repoData.isEmpty {
+			_rows.append(.section(.repositories))
+			
+			let sorted = _repoData.sorted {
+				$0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+			}
+			
+			_rows.append(contentsOf: sorted.map { .repo($0) })
+		}
+		
+		_sidebarOutlineView.reloadData()
+	}
+	
+	private func _showContentController(_ controller: NSViewController) {
 		_container.swapContent(controller)
-		view.window?.title = controller.title ?? Bundle.main.name
-		delegate?.splitViewController(self, didSelect: controller)
+		
+		view.window?.title =
+		controller.title ??
+		Bundle.main.name
+		
+		delegate?.splitViewController(
+			self,
+			didSelect: controller
+		)
 	}
 }
 
 extension MainSplitViewController: NSOutlineViewDataSource, NSOutlineViewDelegate {
 	func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-		SidebarSection.allCases.count
+		item == nil ? _rows.count : 0
+	}
+	
+	func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+		_rows[index]
 	}
 	
 	func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
 		false
-	}
-	
-	func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-		SidebarSection.allCases[index]
 	}
 	
 	func outlineView(
@@ -166,42 +241,116 @@ extension MainSplitViewController: NSOutlineViewDataSource, NSOutlineViewDelegat
 		viewFor tableColumn: NSTableColumn?,
 		item: Any
 	) -> NSView? {
-		guard let section = item as? SidebarSection else {
-			return nil
+		guard let item = item as? SidebarItem else { return nil }
+
+		switch item {
+		case .section(let sectionType):
+			let cell = VNSectionTableCellView()
+			cell.configure(
+				title: sectionType.title,
+				color: .secondaryLabelColor,
+				fontSize: 11
+			)
+			return cell
+		case .navigation(let section):
+			let cell = MainSplitViewCellView()
+			cell.configure(with: section)
+			return cell
+		case .repo(let repo):
+			let cell = MainSplitViewCellView()
+			cell.configure(with: repo)
+			return cell
 		}
-		
-		let cell = MainSplitViewCellView()
-		cell.configure(with: section)
-		
-		return cell
 	}
 	
 	func outlineViewSelectionDidChange(_ notification: Notification) {
 		let row = _sidebarOutlineView.selectedRow
-		guard row >= 0 else { return }
-		showContentController(contentControllers[SidebarSection.allCases[row]]!)
+		guard row >= 0, row < _rows.count else { return }
+		
+		let item = _rows[row]
+		
+		switch item {
+		case .section:
+			return
+		case .navigation(let section):
+			_showContentController(contentControllers[section]!)
+		case .repo(let repo):
+			let vc = PackagesSplitViewController(
+				titleText: repo.name,
+				url: repo.url
+			)
+			
+			vc.title = repo.name
+			_showContentController(vc)
+		}
 	}
 	
-	func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+	func outlineView(_ outlineView: NSOutlineView, isGroupItem item: Any) -> Bool {
+		guard let item = item as? SidebarItem else { return false }
+		
+		if case .section = item {
+			return true
+		}
+		
+		return false
+	}
+	
+	func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
+		guard let item = item as? SidebarItem else {
+			return true
+		}
+		
+		if case .section = item {
+			return false
+		}
+		
+		return true
+	}
+	
+	func outlineView(
+		_ outlineView: NSOutlineView,
+		rowViewForItem item: Any
+	) -> NSTableRowView? {
 		MainSplitViewRowView()
 	}
 }
 
 extension MainSplitViewController: NSSearchFieldDelegate {
 	func controlTextDidChange(_ obj: Notification) {
-		guard let field = obj.object as? NSSearchField else { return }
+		guard let field = obj.object as? NSSearchField else {
+			return
+		}
 		
 		if field.stringValue.isEmpty {
 			let row = _sidebarOutlineView.selectedRow
-			guard row >= 0 else { return }
-			showContentController(contentControllers[SidebarSection.allCases[row]]!)
+			guard row >= 0, row < _rows.count else {
+				return
+			}
+			
+			switch _rows[row] {
+			case .section:
+				return
+			case .navigation(let section):
+				_showContentController(contentControllers[section]!)
+			case .repo(let repo):
+				let vc = PackagesSplitViewController(
+					titleText: repo.name,
+					url: repo.url
+				)
+				
+				vc.title = repo.name
+				_showContentController(vc)
+			}
 		} else {
 			_sidebarOutlineView.deselectAll(nil)
-			fatalError("not yet implemented")
+			return
 		}
 	}
 }
 
 protocol MainSplitViewControllerDelegate: AnyObject {
-	func splitViewController(_ vc: MainSplitViewController, didSelect controller: NSViewController)
+	func splitViewController(
+		_ vc: MainSplitViewController,
+		didSelect controller: NSViewController
+	)
 }

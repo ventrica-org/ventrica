@@ -136,7 +136,6 @@ final class PackagesListViewController: NSViewController {
 		var err: OpaquePointer? = nil
 		
 		if let url = _url {
-			print(url)
 			var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepoPackage>?>? = nil
 			var pkgCount: Int = 0
 			

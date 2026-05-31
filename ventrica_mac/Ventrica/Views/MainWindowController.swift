@@ -9,14 +9,13 @@ import AppKit
 import VentricaUI
 
 final class MainWindowController: NSWindowController {
-	private let _contentSize 	= NSSize(width: 1100, height: 700)
+	private let _contentSize = NSSize(width: 1100, height: 700)
 	private let _minContentSize = NSSize(width: 900, height: 300)
 	
 	private let _splitVC = MainSplitViewController()
 	
-	private weak var _currentContentVC: (
-		NSViewController & ToolbarConfigurable
-	)?
+	private weak var _currentContentVC: (NSViewController & ToolbarConfigurable)?
+	private var _activeSplitProvider: (NSViewController & ToolbarSplitViewProviding)?
 	
 	private let _toolbar: NSToolbar = {
 		let v = NSToolbar(identifier: "VNMainToolbar")
@@ -43,6 +42,10 @@ final class MainWindowController: NSWindowController {
 		
 		_toolbar.delegate = self
 		window.toolbar = _toolbar
+		
+		DispatchQueue.main.async {
+			self._invalidateToolbar()
+		}
 	}
 	
 	@available(*, unavailable)
@@ -51,32 +54,39 @@ final class MainWindowController: NSWindowController {
 	}
 }
 
+extension MainWindowController: MainSplitViewControllerDelegate {
+	func splitViewController(
+		_ vc: MainSplitViewController,
+		didSelect controller: NSViewController
+	) {
+		_currentContentVC = controller as? (NSViewController & ToolbarConfigurable)
+		_activeSplitProvider = controller as? (NSViewController & ToolbarSplitViewProviding)
+		
+		_invalidateToolbar()
+	}
+}
+
 private extension MainWindowController {
-	func _toolbarIdentifiers() -> [NSToolbarItem.Identifier] {
-		_currentContentVC?.toolbarIdentifiers ?? [.toggleSidebar, .mainSeparator]
+	func _currentToolbarIdentifiers() -> [NSToolbarItem.Identifier] {
+		_currentContentVC?.toolbarIdentifiers ?? [
+			.toggleSidebar,
+			.mainSeparator,
+			.flexibleSpace
+		]
 	}
 	
-	func _rebuildToolbarIfNeeded() {
-		guard let toolbar = window?.toolbar else { return }
-		
-		let current = toolbar.items.map(\.itemIdentifier)
-		let desired = _toolbarIdentifiers()
-		
-		guard current != desired else { return }
+	func _invalidateToolbar() {
+		_toolbar.validateVisibleItems()
 		
 		for i in stride(
-			from: toolbar.items.count - 1,
+			from: _toolbar.items.count - 1,
 			through: 0,
 			by: -1
 		) {
-			toolbar.removeItem(at: i)
+			_toolbar.removeItem(at: i)
 		}
-		
-		for (index, identifier) in desired.enumerated() {
-			toolbar.insertItem(
-				withItemIdentifier: identifier,
-				at: index
-			)
+		for (index, id) in _currentToolbarIdentifiers().enumerated() {
+			_toolbar.insertItem(withItemIdentifier: id, at: index)
 		}
 	}
 	
@@ -85,35 +95,17 @@ private extension MainWindowController {
 	}
 }
 
-extension MainWindowController: MainSplitViewControllerDelegate {
-	func splitViewController(
-		_ vc: MainSplitViewController,
-		didSelect controller: NSViewController
-	) {
-		_currentContentVC = controller
-		as? (NSViewController & ToolbarConfigurable)
-		
-		_rebuildToolbarIfNeeded()
-	}
-}
-
 extension MainWindowController: NSToolbarDelegate {
-	func toolbarDefaultItemIdentifiers(
-		_ toolbar: NSToolbar
-	) -> [NSToolbarItem.Identifier] {
-		_toolbarIdentifiers()
+	func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+		_currentToolbarIdentifiers()
 	}
 	
-	func toolbarAllowedItemIdentifiers(
-		_ toolbar: NSToolbar
-	) -> [NSToolbarItem.Identifier] {[
+	func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {[
 		.toggleSidebar,
-		.flexibleSpace,
 		.mainSeparator,
 		.innerSeparator,
-		.plus,
-		.share,
-		.back
+		.flexibleSpace,
+		.share
 	]}
 	
 	func toolbar(
@@ -129,32 +121,20 @@ extension MainWindowController: NSToolbarDelegate {
 				dividerIndex: 0
 			)
 		case .innerSeparator:
-			guard let splitVC = _currentContentVC as? VNSplitViewController else {
+			guard let splitView = _activeSplitProvider?.toolbarSplitView else {
 				return nil
 			}
 			
 			return NSTrackingSeparatorToolbarItem(
 				identifier: itemIdentifier,
-				splitView: splitVC.splitView,
+				splitView: splitView,
 				dividerIndex: 0
-			)
-		case .plus:
-			return _makeToolbarItem(
-				identifier: .plus,
-				label: "Add",
-				symbolName: "plus"
 			)
 		case .share:
 			return _makeToolbarItem(
 				identifier: .share,
 				label: "Share",
 				symbolName: "square.and.arrow.up"
-			)
-		case .back:
-			return _makeToolbarItem(
-				identifier: .back,
-				label: "Back",
-				symbolName: "chevron.left"
 			)
 		default:
 			return nil
@@ -163,9 +143,7 @@ extension MainWindowController: NSToolbarDelegate {
 }
 
 extension MainWindowController: NSToolbarItemValidation {
-	func validateToolbarItem(
-		_ item: NSToolbarItem
-	) -> Bool {
+	func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
 		_currentContentVC?
 			.validateToolbarItem(item.itemIdentifier)
 		?? false
@@ -200,12 +178,10 @@ private extension MainWindowController {
 
 protocol ToolbarConfigurable: AnyObject {
 	var toolbarIdentifiers: [NSToolbarItem.Identifier] { get }
-	
-	func performToolbarAction(
-		_ identifier: NSToolbarItem.Identifier
-	)
-	
-	func validateToolbarItem(
-		_ identifier: NSToolbarItem.Identifier
-	) -> Bool
+	func performToolbarAction(_ identifier: NSToolbarItem.Identifier)
+	func validateToolbarItem(_ identifier: NSToolbarItem.Identifier) -> Bool
+}
+
+protocol ToolbarSplitViewProviding: AnyObject {
+	var toolbarSplitView: NSSplitView { get }
 }

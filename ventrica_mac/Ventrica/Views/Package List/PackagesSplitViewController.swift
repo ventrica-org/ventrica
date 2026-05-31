@@ -51,15 +51,21 @@ extension PackagesSplitViewController: PackagesListViewControllerDelegate {
 	}
 }
 
-extension PackagesSplitViewController: ToolbarConfigurable {
-	var toolbarIdentifiers: [NSToolbarItem.Identifier] {[
-		.toggleSidebar,
-		.mainSeparator,
-		.flexibleSpace,
-		.innerSeparator,
-		.flexibleSpace,
-		.share
-	]}
+extension PackagesSplitViewController: ToolbarConfigurable, ToolbarSplitViewProviding {
+	var toolbarSplitView: NSSplitView {
+		splitView
+	}
+	
+	var toolbarIdentifiers: [NSToolbarItem.Identifier] {
+		[
+			.toggleSidebar,
+			.mainSeparator,
+			.flexibleSpace,
+			.innerSeparator,
+			.flexibleSpace,
+			.share
+		]
+	}
 	
 	func performToolbarAction(
 		_ identifier: NSToolbarItem.Identifier,

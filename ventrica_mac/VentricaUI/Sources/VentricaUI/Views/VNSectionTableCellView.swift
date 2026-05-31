@@ -13,7 +13,6 @@ public class VNSectionTableCellView: NSTableCellView {
 	
 	private let _titleLabel: NSTextField = {
 		let v = NSTextField(labelWithString: "")
-		v.font = .systemFont(ofSize: 13, weight: .semibold)
 		v.lineBreakMode = .byTruncatingTail
 		return v
 	}()
@@ -35,7 +34,17 @@ public class VNSectionTableCellView: NSTableCellView {
 		fatalError("init(coder:) has not been implemented")
 	}
 	
-	public func configure(title: String) {
+	public func configure(
+		title: String,
+		color: NSColor? = nil,
+		fontSize: CGFloat = 13
+	) {
 		_titleLabel.stringValue = title
+		
+		if let color {
+			_titleLabel.textColor = color
+		}
+		
+		_titleLabel.font = .systemFont(ofSize: fontSize, weight: .semibold)
 	}
 }
