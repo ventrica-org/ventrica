@@ -8,7 +8,7 @@ xcframework: apple-build
   mkdir ventrica_ffi/_build/libs
   lipo -create -output ventrica_ffi/_build/libs/ventrica-macos.a \
     target/aarch64-apple-darwin/release/libventrica_ffi.a \
-    # target/x86_64-apple-darwin/release/libventrica_ffi.a
+    target/x86_64-apple-darwin/release/libventrica_ffi.a
 
   xcodebuild -create-xcframework \
     -library ventrica_ffi/_build/libs/ventrica-macos.a -headers ventrica_ffi/_build/include \
@@ -18,4 +18,4 @@ xcframework: apple-build
 apple-build:
   # macOS (native)
   cargo build --release --target aarch64-apple-darwin
-  # cargo build --release --target x86_64-apple-darwin
+  cargo build --release --target x86_64-apple-darwin
