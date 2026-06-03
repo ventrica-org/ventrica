@@ -73,6 +73,9 @@ pub enum Error {
     #[error("KDL encode error")]
     SKdl(#[from] kdl::se::Error),
 
+    #[error("LZMA error: {0}")]
+    Lzma(#[from] lzma_rs::error::Error),
+
     #[error("MessagePack error: {0}")]
     Msgpack(String),
 }

@@ -186,7 +186,7 @@ final class MainSplitViewController: NSSplitViewController {
 	@objc private func _load() {
 		var repos: [Repo] = []
 		
-		var err: OpaquePointer? = nil
+		var err: UnsafeMutablePointer<VentError>? = nil
 		var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepo>?>? = nil
 		var count: Int = 0
 		
@@ -261,7 +261,7 @@ final class MainSplitViewController: NSSplitViewController {
 		alert.beginSheetModal(for: window) { response in
 			if response == .alertFirstButtonReturn {
 				let value = textField.stringValue
-				var err: OpaquePointer? = nil
+				var err: UnsafeMutablePointer<VentError>? = nil
 				
 				guard ventrica_add_repo(value, &err) == 0 else {
 					if let e = err {

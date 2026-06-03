@@ -133,10 +133,10 @@ final class PackagesListViewController: NSViewController {
 	
 	@objc private func _load() {
 		var packages: [Package] = []
-		var err: OpaquePointer? = nil
+		var err: UnsafeMutablePointer<VentError>? = nil
 		
 		if let url = _url {
-			var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentRepoPackage>?>? = nil
+			var pkgArr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
 			var pkgCount: Int = 0
 			
 			guard ventrica_list_repo_packages(url, &pkgArr, &pkgCount, &err) == 0 else {
@@ -155,7 +155,7 @@ final class PackagesListViewController: NSViewController {
 				
 				for i in 0..<pkgCount {
 					guard let pkg = pkgArr[i] else { continue }
-					packages.append(Package(repoPackage: pkg.pointee))
+					packages.append(Package(package: pkg.pointee))
 				}
 			}
 		} else {

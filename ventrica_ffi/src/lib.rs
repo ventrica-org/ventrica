@@ -77,7 +77,7 @@ impl Drop for VentRepo {
 
 #[repr(C)]
 pub struct VentError {
-    message: CString,
+    pub message: *const c_char,
 }
 
 fn package_to_vent_package(pkg: Package) -> *mut VentPackage {
@@ -149,7 +149,9 @@ unsafe fn set_error(out: *mut *mut VentError, msg: impl std::fmt::Display) {
     }
     let msg = CString::new(msg.to_string())
         .unwrap_or_else(|_| CString::new("error message contained a null byte").unwrap());
-    *out = Box::into_raw(Box::new(VentError { message: msg }));
+    *out = Box::into_raw(Box::new(VentError {
+        message: msg.into_raw(),
+    }));
 }
 
 unsafe fn clear_error(out: *mut *mut VentError) {
@@ -602,7 +604,7 @@ unsafe fn free_array<T>(arr: *mut *mut T, count: usize) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ventrica_error_message(err: *const VentError) -> *const c_char {
-    (*err).message.as_ptr()
+    (*err).message
 }
 
 #[unsafe(no_mangle)]

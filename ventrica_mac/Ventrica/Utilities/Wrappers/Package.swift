@@ -33,20 +33,6 @@ struct Package {
 		self.varHash			= nil
 		self.runDeps			= cStringArrayToSwift(package.run_dep_names, maxCount: Int(package.run_dep_names_count))
 	}
-	
-	init(repoPackage: VentRepoPackage) {
-		self.name				= String(cString: repoPackage.name)
-		self.version			= String(cString: repoPackage.version)
-		self.description		= String(cString: repoPackage.description)
-		self.category			= String(cString: repoPackage.category)
-		self.addedAt			= nil
-		self.icon				= repoPackage.icon.map { String(cString: $0) }
-		self.nativeDescription	= repoPackage.native_description.map { String(cString: $0) }
-		self.storeName			= String(cString: repoPackage.store_name)
-		self.fileName			= String(cString: repoPackage.filename)
-		self.varHash			= String(cString: repoPackage.var_hash)
-		self.runDeps 			= cStringArrayToSwift(repoPackage.run_deps, maxCount: Int(repoPackage.run_deps_count))
-	}
 }
 
 func cStringArrayToSwift(

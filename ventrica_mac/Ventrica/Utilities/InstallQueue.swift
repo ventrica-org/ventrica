@@ -197,7 +197,7 @@ final class InstallQueue {
 	private static func _fetchInstalledData() async -> InstalledData {
 		return await withCheckedContinuation { continuation in
 			DispatchQueue.global(qos: .utility).async {
-				var err: OpaquePointer? = nil
+				var err: UnsafeMutablePointer<VentError>? = nil
 				var arr: UnsafeMutablePointer<UnsafeMutablePointer<VentPackage>?>? = nil
 				var count: Int = 0
 				
@@ -235,8 +235,8 @@ final class InstallQueue {
 		toInstall: [String],
 		toRemove: [(String, String)]
 	) -> (Bool, String?) {
-		var err: OpaquePointer? = nil
-
+		var err: UnsafeMutablePointer<VentError>? = nil
+		
 		if !toInstall.isEmpty {
 			let cArray: [UnsafePointer<CChar>?] = toInstall.map { strdup($0).map { UnsafePointer<CChar>($0) } } + [nil]
 			defer { for ptr in cArray where ptr != nil { free(UnsafeMutableRawPointer(mutating: ptr)) } }
@@ -255,7 +255,7 @@ final class InstallQueue {
 		return (true, nil)
 	}
 	
-	private static func _consumeError(_ err: inout OpaquePointer?) -> String? {
+	private static func _consumeError(_ err: inout UnsafeMutablePointer<VentError>?) -> String? {
 		guard let e = err else { return nil }
 		let msg = String(cString: ventrica_error_message(e))
 		ventrica_error_free(e)
