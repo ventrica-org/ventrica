@@ -4,7 +4,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
-use crate::schema::kdl::Package;
+use crate::schema::kdl::{Generation, Package, Repo};
 use crate::store::simple_store_name;
 
 const SCHEMA: &str = r#"
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS repositories (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL,
     url        TEXT NOT NULL UNIQUE,
-    added_at   INTEGER NOT NULL
+    installed_at   INTEGER NOT NULL
 );
 "#;
 
@@ -97,24 +97,6 @@ impl From<&PackageRecord> for Package {
             scripts: None,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RepoRecord {
-    pub id: i64,
-    pub name: String,
-    pub url: String,
-    pub added_at: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerationRecord {
-    pub id: i64,
-    pub number: u32,
-    pub created_at: i64,
-    pub description: Option<String>,
-    pub current: bool,
-    pub packages: Vec<PackageRecord>,
 }
 
 pub struct Database {
@@ -220,7 +202,7 @@ impl Database {
         &self,
         package_ids: &[i64],
         description: Option<&str>,
-    ) -> Result<GenerationRecord> {
+    ) -> Result<Generation> {
         let number = self.next_generation_number()?;
         let now = unix_now();
 
@@ -246,17 +228,16 @@ impl Database {
 
         tx.commit()?;
 
-        Ok(GenerationRecord {
+        Ok(Generation {
             id: gen_id,
             number,
             created_at: now,
             description: description.map(ToOwned::to_owned),
             current: false,
-            packages: vec![],
         })
     }
 
-    pub fn get_generation(&self, number: u32) -> Result<GenerationRecord> {
+    pub fn get_generation(&self, number: u32) -> Result<Generation> {
         let rec = self
             .conn
             .query_row(
@@ -269,7 +250,7 @@ impl Database {
         Ok(rec)
     }
 
-    pub fn list_generations(&self) -> Result<Vec<GenerationRecord>> {
+    pub fn list_generations(&self) -> Result<Vec<Generation>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, number, created_at, description FROM generations ORDER BY number",
         )?;
@@ -344,17 +325,18 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_repos(&self) -> Result<Vec<RepoRecord>> {
+    pub fn list_repos(&self) -> Result<Vec<Repo>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, url, added_at FROM repositories ORDER BY added_at")?;
+            .prepare("SELECT id, name, url, installed_at FROM repositories ORDER BY added_at")?;
         let rows = stmt
             .query_map([], |row| {
-                Ok(RepoRecord {
+                Ok(Repo {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     url: row.get(2)?,
-                    added_at: row.get(3)?,
+                    installed_at: row.get(3)?,
+                    ..Default::default()
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -380,14 +362,13 @@ fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<PackageRecord> {
     })
 }
 
-fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<GenerationRecord> {
-    Ok(GenerationRecord {
+fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<Generation> {
+    Ok(Generation {
         id: row.get(0)?,
         number: row.get(1)?,
         created_at: row.get(2)?,
         description: row.get(3)?,
         current: false,
-        packages: vec![],
     })
 }
 

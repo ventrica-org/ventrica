@@ -46,11 +46,7 @@ fn repo_from_dir(repo_dir: &Path) -> Repo {
 
     Repo {
         name,
-        description: "KDL package repository".to_owned(),
-        icon: None,
-        homepage: None,
-        packages: Vec::new(),
-        installed_at: None,
+        ..Default::default()
     }
 }
 

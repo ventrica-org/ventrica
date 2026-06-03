@@ -613,8 +613,7 @@ pub unsafe extern "C" fn ventrica_list_repo_packages(
                         .dependencies
                         .as_ref()
                         .map(|deps| {
-                            deps.dep
-                                .iter()
+                            deps.iter()
                                 .filter(|d| !d.is_build.unwrap_or(false))
                                 .map(|d| d.name.clone())
                                 .collect()

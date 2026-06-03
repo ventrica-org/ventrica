@@ -3,15 +3,52 @@ use std::path::PathBuf;
 use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 
-#[allow(dead_code)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct Generation {
+    pub id: i64,
+    pub number: u32,
+    pub created_at: i64,
+    pub description: Option<String>,
+    pub current: bool,
+}
+
+impl Default for Generation {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            number: 0,
+            created_at: 0,
+            description: None,
+            current: false,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Repo {
+    pub id: i64,
+    pub url: Option<String>,
     pub installed_at: Option<String>,
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub icon: Option<String>,
     pub homepage: Option<String>,
     pub packages: Vec<Package>,
+}
+
+impl Default for Repo {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            url: None,
+            installed_at: None,
+            name: "Unnamed".to_owned(),
+            description: None,
+            icon: None,
+            homepage: None,
+            packages: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]

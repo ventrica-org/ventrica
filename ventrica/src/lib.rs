@@ -11,4 +11,4 @@ pub mod store;
 
 pub use error::{Error, Result};
 pub use schema::kdl::Package;
-pub use store::db::{GenerationRecord, PackageRecord, RepoRecord};
+pub use store::db::PackageRecord;
