@@ -285,7 +285,7 @@ impl Database {
     pub fn add_repo(&self, name: &str, url: &str) -> Result<()> {
         let now = unix_now();
         self.conn.execute(
-            "INSERT OR IGNORE INTO repositories (name, url, added_at) VALUES (?1, ?2, ?3)",
+            "INSERT OR IGNORE INTO repositories (name, url, installed_at) VALUES (?1, ?2, ?3)",
             params![name, url, now],
         )?;
         Ok(())
@@ -298,9 +298,9 @@ impl Database {
     }
 
     pub fn list_repos(&self) -> Result<Vec<Repo>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, url, installed_at FROM repositories ORDER BY added_at")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, url, installed_at FROM repositories ORDER BY installed_at",
+        )?;
         let rows = stmt
             .query_map([], |row| {
                 Ok(Repo {

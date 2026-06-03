@@ -19,7 +19,7 @@ fn main() {
     unsafe {
         let socket_ptr = Arc::into_raw(socket_for_handler) as usize;
         for &sig in &[libc::SIGINT, libc::SIGTERM] {
-            libc::signal(sig, handle_signal as libc::sighandler_t);
+            libc::signal(sig, handle_signal as *const () as libc::sighandler_t);
         }
         SOCKET_PATH_PTR.store(socket_ptr, Ordering::SeqCst);
     }

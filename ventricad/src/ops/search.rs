@@ -18,8 +18,8 @@ pub fn search(query: &str) -> ventrica::Result<Vec<Package>> {
         .into_iter()
         .map(|r| {
             let mut package = r;
-            if let Some(installed_pkg) = installed.iter().find(|p| p.name == package.name) {
-                mark_package_installed(&mut package, installed_pkg.package_hash.clone());
+            if installed.iter().any(|p| p.name == package.name) {
+                mark_package_installed(&mut package);
             } else {
                 mark_package_not_installed(&mut package);
             }

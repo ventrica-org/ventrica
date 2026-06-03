@@ -30,7 +30,7 @@ impl Default for Generation {
 pub struct Repo {
     pub id: Option<i64>,
     pub url: Option<String>,
-    pub installed_at: Option<String>,
+    pub installed_at: Option<i64>,
     pub name: String,
     pub description: Option<String>,
     pub icon: Option<String>,
@@ -44,7 +44,7 @@ impl Default for Repo {
             id: None,
             url: None,
             installed_at: None,
-            name: "Untitled Repo".to_owned(),
+            name: String::new(),
             description: None,
             icon: None,
             homepage: None,
@@ -59,8 +59,7 @@ pub struct Package {
     pub is_installed: Option<bool>,
     pub is_cached: Option<bool>,
     pub is_disabled: Option<bool>,
-    pub package_hash: Option<String>,
-    pub installed_at: Option<String>,
+    pub installed_at: Option<i64>,
 
     pub name: String,
     pub version: String,
@@ -87,7 +86,6 @@ impl Default for Package {
             is_installed: None,
             is_cached: None,
             is_disabled: None,
-            package_hash: None,
             installed_at: None,
             name: String::new(),
             version: String::new(),
@@ -111,7 +109,6 @@ pub struct Dependency {
     pub name: Option<String>,
     pub version: Option<String>,
     pub is_build: Option<bool>,
-    pub package_hash: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]

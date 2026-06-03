@@ -13,14 +13,12 @@ use crate::schema::kdl::Repo;
 pub const MANIFEST_FILE: &str = "manifest.msgpack";
 pub const MANIFEST_HASH_FILE: &str = "manifest.msgpack.sha256";
 
-pub fn mark_package_installed(package: &mut Package, package_hash: Option<String>) {
+pub fn mark_package_installed(package: &mut Package) {
     package.is_installed = Some(true);
-    package.package_hash = package_hash;
 }
 
 pub fn mark_package_not_installed(package: &mut Package) {
     package.is_installed = Some(false);
-    package.package_hash = None;
 }
 
 pub fn run_dependencies(package: &Package) -> Vec<String> {
