@@ -10,5 +10,4 @@ pub mod schema;
 pub mod store;
 
 pub use error::{Error, Result};
-pub use schema::package::Package;
 pub use store::db::{GenerationRecord, PackageRecord, RepoRecord};

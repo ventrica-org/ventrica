@@ -9,8 +9,8 @@ pub use remote::{fetch_manifest, fetch_manifest_cached, get_manifest, refresh_ma
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
-use crate::schema::package::Package;
-use crate::schema::repo::RepoMeta;
+use crate::schema::kdl::Package;
+use crate::schema::kdl::Repo;
 
 pub const MANIFEST_FILE: &str = "manifest.msgpack";
 pub const MANIFEST_HASH_FILE: &str = "manifest.msgpack.sha256";

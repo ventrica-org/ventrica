@@ -67,6 +67,9 @@ pub enum Error {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("KDL parse error")]
+    Kdl(#[from] kdl::de::Error),
+
     #[error("MessagePack error: {0}")]
     Msgpack(String),
 }
