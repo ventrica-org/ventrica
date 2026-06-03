@@ -71,5 +71,12 @@ final class MainSplitViewCellView: NSTableCellView {
 		_iconView.wantsLayer = true
 		_iconView.layer?.cornerRadius = 5
 		_titleLabel.stringValue = repo.name
+		
+		if let iconString = repo.icon, let url = URL(string: iconString) {
+			Task { [weak self] in
+				guard let self, let image = await ImageLoader.shared.load(url: url) else { return }
+				await MainActor.run { self._iconView.image = image }
+			}
+		}
 	}
 }

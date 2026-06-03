@@ -31,7 +31,7 @@ pub fn dispatch(req: &Request, build_user: Option<(u32, u32)>, send: &mut dyn Fn
 
         Request::Gc => ops::gc::gc(),
 
-        Request::AddRepo { url } => ops::add_repo::add_repo(url).map(|_| ()),
+        Request::AddRepo { url } => ops::add_repo::add_repo(url),
         Request::RemoveRepo { url } => ops::repos::remove_repo(url),
         Request::UpdateRepos => ops::update::update_repos(),
 

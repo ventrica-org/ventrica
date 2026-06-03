@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS repositories (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL,
     url        TEXT NOT NULL UNIQUE,
+    icon       TEXT,
+    description TEXT,
     installed_at   INTEGER NOT NULL
 );
 "#;
@@ -282,11 +284,11 @@ impl Database {
         Ok(max.unwrap_or(0) + 1)
     }
 
-    pub fn add_repo(&self, name: &str, url: &str) -> Result<()> {
+    pub fn add_repo(&self, repo: &Repo, url: &str) -> Result<()> {
         let now = unix_now();
         self.conn.execute(
-            "INSERT OR IGNORE INTO repositories (name, url, installed_at) VALUES (?1, ?2, ?3)",
-            params![name, url, now],
+            "INSERT OR IGNORE INTO repositories (name, url, icon, description, installed_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![repo.name, url, repo.icon, repo.description, now],
         )?;
         Ok(())
     }
@@ -299,7 +301,7 @@ impl Database {
 
     pub fn list_repos(&self) -> Result<Vec<Repo>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, url, installed_at FROM repositories ORDER BY installed_at",
+            "SELECT id, name, url, icon, description, installed_at FROM repositories ORDER BY installed_at",
         )?;
         let rows = stmt
             .query_map([], |row| {
@@ -307,7 +309,9 @@ impl Database {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     url: row.get(2)?,
-                    installed_at: row.get(3)?,
+                    icon: row.get(3)?,
+                    description: row.get(4)?,
+                    installed_at: row.get(5)?,
                     ..Default::default()
                 })
             })?

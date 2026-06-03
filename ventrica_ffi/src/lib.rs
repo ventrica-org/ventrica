@@ -63,6 +63,7 @@ pub struct VentRepo {
     pub id: i64,
     pub name: *const c_char,
     pub url: *const c_char,
+    pub icon: *const c_char,
     pub added_at: i64,
 }
 
@@ -446,7 +447,8 @@ pub unsafe extern "C" fn ventrica_list_repos(
                     Box::into_raw(Box::new(VentRepo {
                         id: r.id.unwrap_or_default(),
                         name: cs(r.name),
-                        url: cs(r.url.unwrap_or_default()),
+                        url: cs_opt(r.url),
+                        icon: cs_opt(r.icon),
                         added_at: r.installed_at.unwrap_or_default(),
                     }))
                 })
