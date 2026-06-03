@@ -1,7 +1,6 @@
 use ventrica::error::{Error, Result};
 use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo, run_dependencies};
 use ventrica::schema::kdl::Package;
-use ventrica::store::simple_store_name;
 use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
@@ -50,7 +49,6 @@ pub fn install(names: &[String]) -> Result<()> {
         }
     }
 
-    let mut new_records = Vec::new();
     for (base_url, entry) in &resolved {
         log::info!("installing {} {}...", entry.name, entry.version);
 
@@ -62,28 +60,11 @@ pub fn install(names: &[String]) -> Result<()> {
 
         let run_deps = run_dependencies(entry);
         let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
-        let store_name = simple_store_name(&entry.name, &entry.version);
 
-        let record = db.insert_package(
-            &entry.name,
-            &entry.version,
-            &entry.description,
-            entry.category.as_deref().unwrap_or_default(),
-            &store_name,
-            &store_path.display().to_string(),
-            entry.icon.as_deref(),
-            entry.native_depiction.as_deref(),
-            &dep_store_paths,
-        )?;
-        new_records.push(record);
+        db.insert_package(entry, &store_path.display().to_string(), &dep_store_paths)?;
     }
 
-    let mut all_pkgs = db.list_packages()?;
-    for rec in &new_records {
-        if !all_pkgs.iter().any(|p| p.id == rec.id) {
-            all_pkgs.push(rec.clone());
-        }
-    }
+    let all_pkgs = db.list_packages()?;
 
     let desc = format!(
         "install {}",

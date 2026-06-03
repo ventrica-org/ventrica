@@ -6,126 +6,88 @@ use serde::{Deserialize, Serialize};
 #[allow(dead_code)]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Repo {
-    /// The time when the package was installed.
     pub installed_at: Option<String>,
-    /// The name of the repository.
     pub name: String,
-    /// The description of the repository.
     pub description: String,
-    /// The URL to the icon of the repository.
     pub icon: Option<String>,
-    /// The homepage of the repository.
     pub homepage: Option<String>,
-    /// The packages in the repository.
     pub packages: Vec<Package>,
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-struct Root {
-    package: Package,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Package {
-    /// If package is installed.
     pub is_installed: Option<bool>,
-    /// If package should be cached.
     pub is_cached: Option<bool>,
-    /// If package is disabled.
     pub is_disabled: Option<bool>,
-    /// The hash of the package.
     pub package_hash: Option<String>,
-    /// The time when the package was installed.
     pub installed_at: Option<String>,
-    /// The name of the package.
+
     pub name: String,
-    /// The version of the package.
     pub version: String,
-    /// The description of the package.
     pub description: String,
-    /// The URL to the native depiction of the package.
+
     pub native_depiction: Option<String>,
-    /// The license of the package.
     pub license: Option<String>,
-    /// The homepage of the package.
     pub homepage: Option<String>,
-    /// The category of the package.
     pub category: Option<String>,
-    /// The URL to the icon of the package.
     pub icon: Option<String>,
-    /// The platforms supported by the package.
+
     pub platforms: Vec<String>,
-    /// The dependencies of the package.
-    pub dependencies: Option<Dependencies>,
-    /// The source information of the package.
+
+    pub dependencies: Option<Vec<Dependency>>,
     pub source: Option<Source>,
-    /// The autobump configuration of the package.
     pub autobump: Option<Autobump>,
-    /// The scripts for building the package.
     pub scripts: Option<Scripts>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Dependency {
-    /// The name of the dependency.
     pub name: String,
-    /// The version of the dependency.
     pub version: Option<String>,
-    /// If the dependency is a build dependency.
     pub is_build: Option<bool>,
-    /// The hash of the dependency package.
-    pub(crate) package_hash: Option<String>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub struct Dependencies {
-    /// The dependencies of the package.
-    pub dep: Vec<Dependency>,
+    pub package_hash: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Source {
-    /// The URLs to the source of the package.
     pub url: Vec<String>,
-    /// The SHA256 hash of the source archive.
     pub sha256: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Autobump {
-    /// The URL to check for new versions of the package.
     pub url: String,
-    /// The regex to extract the version number from the URL.
     pub regex: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Scripts {
-    /// The build script for the package.
     pub system: Option<String>,
-    /// The build script for the package.
     pub build: String,
-    /// The patches for the package.
     pub patches: Option<Vec<String>>,
 }
 
 impl Package {
     pub fn from_path(path: impl Into<PathBuf>) -> Result<Self, Error> {
         let content = std::fs::read_to_string(path.into())?;
-        let config: Root = kdl::de::from_str(&content)?;
-        Ok(config.package)
+        let config: Package = kdl::de::from_str(&content)?;
+        Ok(config)
     }
 
     pub fn from_str(s: &str) -> Result<Self, Error> {
-        let config: Root = kdl::de::from_str(s)?;
-        Ok(config.package)
+        let config: Package = kdl::de::from_str(s)?;
+        Ok(config)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    const RECIPE: &str = r#"package is_disabled=#false is_cached=#true {
+    use super::*;
+
+    const RECIPE: &str = r#"
+    is_disabled #false 
+    is_cached #true
+
     name "nano"
     version "8.7.1"
     description "Small, friendly text editor inspired by Pico"
@@ -163,18 +125,12 @@ mod tests {
         make install DESTDIR=${DESTDIR}
         """
     }
-}"#;
-
-    use super::*;
+"#;
 
     #[test]
     fn parse() -> miette::Result<()> {
-        let config: Root = kdl::de::from_str(RECIPE)?;
-        println!("{:#?}", &config);
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&config).unwrap_or_default()
-        );
+        let config: Package = kdl::de::from_str(RECIPE)?;
+        println!("{:#?}", config);
         Ok(())
     }
 }

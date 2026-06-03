@@ -70,6 +70,9 @@ pub enum Error {
     #[error("KDL parse error")]
     Kdl(#[from] kdl::de::Error),
 
+    #[error("KDL encode error")]
+    SKdl(#[from] kdl::se::Error),
+
     #[error("MessagePack error: {0}")]
     Msgpack(String),
 }

@@ -11,12 +11,12 @@ pub fn remove_repo(url: &str) -> ventrica::Result<()> {
 
 pub fn list_repo_packages(url: &str) -> ventrica::Result<Vec<Package>> {
     let db = Database::open()?;
-    let installed = db.list_packages()?;
+    let installed = db.list_packages_manifest()?;
     let mut manifest = fetch_manifest_cached(url)?;
 
     for package in &mut manifest.packages {
         if let Some(pkg) = installed.iter().find(|p| p.name == package.name) {
-            mark_package_installed(package, Some(pkg.store_name.clone()));
+            mark_package_installed(package, pkg.package_hash.clone());
         } else {
             mark_package_not_installed(package);
         }

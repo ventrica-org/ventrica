@@ -3,11 +3,12 @@ use std::path::{Path, PathBuf};
 
 use crate::build::download::download;
 use crate::error::{Error, Result};
+use crate::schema::kdl::Repo;
 use crate::store::{REPOS_DIR, sha256_file};
 
-use super::{MANIFEST_FILE, MANIFEST_HASH_FILE, Manifest, decode_manifest};
+use super::{MANIFEST_FILE, MANIFEST_HASH_FILE, decode_manifest};
 
-pub fn refresh_manifest_cache(base_url: &str) -> Result<Manifest> {
+pub fn refresh_manifest_cache(base_url: &str) -> Result<Repo> {
     let cache_dir = repo_cache_dir(base_url);
     fs::create_dir_all(&cache_dir)?;
 
@@ -36,11 +37,11 @@ pub fn refresh_manifest_cache(base_url: &str) -> Result<Manifest> {
     read_manifest(&manifest_path)
 }
 
-pub fn fetch_manifest_cached(base_url: &str) -> Result<Manifest> {
+pub fn fetch_manifest_cached(base_url: &str) -> Result<Repo> {
     get_manifest(base_url)
 }
 
-pub fn fetch_manifest(base_url: &str) -> Result<Manifest> {
+pub fn fetch_manifest(base_url: &str) -> Result<Repo> {
     let tmp = tempfile::tempdir()?;
     let base = base_url.trim_end_matches('/');
     let manifest_path = tmp.path().join(MANIFEST_FILE);
@@ -62,7 +63,7 @@ pub fn fetch_manifest(base_url: &str) -> Result<Manifest> {
     read_manifest(&manifest_path)
 }
 
-pub fn get_manifest(base_url: &str) -> Result<Manifest> {
+pub fn get_manifest(base_url: &str) -> Result<Repo> {
     let cache_dir = repo_cache_dir(base_url);
     fs::create_dir_all(&cache_dir)?;
 
@@ -143,7 +144,7 @@ pub(super) fn repo_cache_dir(base_url: &str) -> PathBuf {
     Path::new(REPOS_DIR).join(format!("{slug}-{hex}"))
 }
 
-fn read_manifest(path: &Path) -> Result<Manifest> {
+fn read_manifest(path: &Path) -> Result<Repo> {
     let bytes = fs::read(path)?;
     decode_manifest(&bytes)
 }

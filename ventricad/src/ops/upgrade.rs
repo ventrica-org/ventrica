@@ -1,6 +1,7 @@
 use ventrica::error::Result;
-use ventrica::repo::{check_updates, dep_store_paths, install_from_repo, run_dependencies};
-use ventrica::store::simple_store_name;
+use ventrica::repo::{
+    check_updates, dep_store_paths, find_in_repos, install_from_repo, run_dependencies,
+};
 use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
@@ -16,7 +17,7 @@ pub fn upgrade(names: &[String]) -> Result<()> {
 
     let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
 
-    let all_installed = db.list_packages()?;
+    let all_installed = db.list_packages_manifest()?;
     let installed: std::collections::HashMap<String, String> = all_installed
         .iter()
         .filter(|p| names.is_empty() || names.iter().any(|n| n == &p.name))
@@ -36,42 +37,42 @@ pub fn upgrade(names: &[String]) -> Result<()> {
     }
 
     for candidate in &candidates {
+        let installed_version = installed.get(&candidate.name).cloned().unwrap_or_default();
         log::info!(
             "upgrading {} {} -> {}...",
             candidate.name,
-            candidate.installed_version,
-            candidate.available_version
+            installed_version,
+            candidate.version
         );
 
-        for dep in run_dependencies(&candidate.package) {
+        for dep in run_dependencies(&candidate) {
             ensure_dep_installed(&dep, &repo_urls)?;
         }
 
-        let store_path = install_from_repo(&candidate.repo_url, &candidate.package)?;
+        let (repo_url, _) = find_in_repos(&candidate.name, &repo_urls)?.ok_or_else(|| {
+            ventrica::Error::PackageNotFound {
+                name: candidate.name.clone(),
+            }
+        })?;
+
+        let store_path = install_from_repo(&repo_url, &candidate)?;
 
         db.remove_package(&candidate.name)?;
 
-        let run_deps = run_dependencies(&candidate.package);
+        let run_deps = run_dependencies(&candidate);
         let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
-        let store_name = simple_store_name(&candidate.package.name, &candidate.package.version);
 
         db.insert_package(
-            &candidate.package.name,
-            &candidate.package.version,
-            &candidate.package.description,
-            candidate.package.category.as_deref().unwrap_or_default(),
-            &store_name,
+            candidate,
             &store_path.display().to_string(),
-            candidate.package.icon.as_deref(),
-            candidate.package.native_depiction.as_deref(),
             &dep_store_paths,
         )?;
 
         log::info!(
             "upgraded {} {} -> {}",
             candidate.name,
-            candidate.installed_version,
-            candidate.available_version
+            installed_version,
+            candidate.version
         );
     }
 
@@ -80,7 +81,7 @@ pub fn upgrade(names: &[String]) -> Result<()> {
         "upgrade {}",
         candidates
             .iter()
-            .map(|c| format!("{} -> {}", c.name, c.available_version))
+            .map(|c| format!("{} -> {}", c.name, c.version))
             .collect::<Vec<_>>()
             .join(", ")
     );

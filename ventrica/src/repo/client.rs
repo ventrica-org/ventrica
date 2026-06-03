@@ -9,7 +9,7 @@ use crate::store::var as var_fmt;
 use crate::store::{STORE_DIR, seal, sha256_file, simple_store_name};
 
 use super::remote::get_manifest;
-use super::{SearchResult, UpdateCandidate, run_dependencies};
+use super::run_dependencies;
 
 pub fn dep_store_paths(repo_urls: &[String], run_deps: &[String]) -> Vec<String> {
     fn walk(repo_urls: &[String], name: &str, seen: &mut HashSet<String>, out: &mut Vec<String>) {
@@ -60,7 +60,7 @@ pub fn find_in_repos(
     Ok(None)
 }
 
-pub fn search_repos(query: &str, repo_urls: &[String]) -> Result<Vec<SearchResult>> {
+pub fn search_repos(query: &str, repo_urls: &[String]) -> Result<Vec<Package>> {
     let mut results = Vec::new();
     for url in repo_urls {
         let manifest = match get_manifest(url) {
@@ -71,16 +71,11 @@ pub fn search_repos(query: &str, repo_urls: &[String]) -> Result<Vec<SearchResul
             }
         };
         let q = query.to_lowercase();
-        let repo_name = manifest.repo.name.clone();
         for package in manifest.packages {
             if package.name.to_lowercase().contains(&q)
                 || package.description.to_lowercase().contains(&q)
             {
-                results.push(SearchResult {
-                    repo_url: url.clone(),
-                    repo_name: repo_name.clone(),
-                    package,
-                });
+                results.push(package);
             }
         }
     }
@@ -90,7 +85,7 @@ pub fn search_repos(query: &str, repo_urls: &[String]) -> Result<Vec<SearchResul
 pub fn check_updates(
     installed: &HashMap<String, String>,
     repo_urls: &[String],
-) -> Result<Vec<UpdateCandidate>> {
+) -> Result<Vec<Package>> {
     if installed.is_empty() || repo_urls.is_empty() {
         return Ok(Vec::new());
     }
@@ -115,13 +110,7 @@ pub fn check_updates(
             if let Some(installed_ver) = installed.get(name) {
                 resolved.insert(name.clone());
                 if package.version != *installed_ver {
-                    candidates.push(UpdateCandidate {
-                        name: name.clone(),
-                        installed_version: installed_ver.clone(),
-                        available_version: package.version.clone(),
-                        repo_url: url.clone(),
-                        package,
-                    });
+                    candidates.push(package);
                 }
             }
         }

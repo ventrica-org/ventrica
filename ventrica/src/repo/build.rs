@@ -6,9 +6,7 @@ use crate::error::{Error, Result};
 use crate::schema::kdl::{Package, Repo};
 use crate::store::sha256_file;
 
-use super::{
-    MANIFEST_FILE, MANIFEST_HASH_FILE, Manifest, encode_manifest, mark_package_not_installed,
-};
+use super::{MANIFEST_FILE, MANIFEST_HASH_FILE, encode_manifest, mark_package_not_installed};
 
 pub fn build_repo(repo_dir: &Path, _build_user: Option<(u32, u32)>) -> Result<()> {
     let packages_dir = repo_dir.join("packages");
@@ -27,8 +25,8 @@ pub fn build_repo(repo_dir: &Path, _build_user: Option<(u32, u32)>) -> Result<()
         manifest_packages.push(package);
     }
 
-    let repo = repo_from_dir(repo_dir);
-    write_manifest(&cache_dir, &repo, &manifest_packages)?;
+    let mut repo = repo_from_dir(repo_dir);
+    write_manifest(&cache_dir, &mut repo, &manifest_packages)?;
 
     log::info!(
         "==> Repository '{}' built - {} package(s) in {}",
@@ -100,7 +98,7 @@ pub fn topo_sort(packages: Vec<(PathBuf, Package)>) -> Result<Vec<(PathBuf, Pack
     for (i, (_, pkg)) in packages.iter().enumerate() {
         let mut seen: HashSet<usize> = HashSet::new();
         if let Some(deps) = &pkg.dependencies {
-            for dep in &deps.dep {
+            for dep in deps {
                 let Some(&j) = name_to_idx.get(dep.name.as_str()) else {
                     continue;
                 };
@@ -140,13 +138,10 @@ pub fn topo_sort(packages: Vec<(PathBuf, Package)>) -> Result<Vec<(PathBuf, Pack
     Ok(order.into_iter().map(|i| packages[i].clone()).collect())
 }
 
-fn write_manifest(cache_dir: &Path, repo: &Repo, packages: &[Package]) -> Result<()> {
-    let manifest = Manifest {
-        repo: repo.clone(),
-        packages: packages.to_vec(),
-    };
+fn write_manifest(cache_dir: &Path, repo: &mut Repo, packages: &[Package]) -> Result<()> {
+    repo.packages = packages.to_vec();
 
-    let bytes = encode_manifest(&manifest)?;
+    let bytes = encode_manifest(&repo)?;
 
     let manifest_path = cache_dir.join(MANIFEST_FILE);
     fs::write(&manifest_path, &bytes)?;

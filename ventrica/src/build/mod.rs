@@ -125,7 +125,7 @@ impl<'a> Builder<'a> {
         log::info!("source ready at {}", source_root.display());
 
         if let Some(scripts) = &pkg.scripts {
-            apply_patches(scripts, &source_root, name, self.recipe_dir.as_deref())?;
+            apply_patches(&scripts, &source_root, name, self.recipe_dir.as_deref())?;
         }
 
         log::info!("patches applied");

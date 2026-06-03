@@ -27,17 +27,7 @@ pub fn ensure_dep_installed(dep_name: &str, repo_urls: &[String]) -> Result<()> 
     {
         let run_deps = run_dependencies(&entry);
         let dep_paths = dep_store_paths(repo_urls, &run_deps);
-        db.insert_package(
-            &entry.name,
-            &entry.version,
-            &entry.description,
-            entry.category.as_deref().unwrap_or_default(),
-            &store_name,
-            &store_path.display().to_string(),
-            entry.icon.as_deref(),
-            entry.native_depiction.as_deref(),
-            &dep_paths,
-        )?;
+        db.insert_package(&entry, &store_path.display().to_string(), &dep_paths)?;
     }
 
     Ok(())
