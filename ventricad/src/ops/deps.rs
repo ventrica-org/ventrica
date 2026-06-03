@@ -1,6 +1,7 @@
 use ventrica::error::Result;
-use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo};
-use ventrica::store::{STORE_DIR, db::Database};
+use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo, run_dependencies};
+use ventrica::store::db::Database;
+use ventrica::store::simple_store_path;
 
 pub fn ensure_dep_installed(dep_name: &str, repo_urls: &[String]) -> Result<()> {
     let Some((base_url, entry)) = find_in_repos(dep_name, repo_urls)? else {
@@ -8,11 +9,11 @@ pub fn ensure_dep_installed(dep_name: &str, repo_urls: &[String]) -> Result<()> 
         return Ok(());
     };
 
-    for transitive in entry.run_deps.clone() {
+    for transitive in run_dependencies(&entry) {
         ensure_dep_installed(&transitive, repo_urls)?;
     }
 
-    let store_path = std::path::Path::new(STORE_DIR).join(&entry.store_name);
+    let store_path = simple_store_path(&entry.name, &entry.version);
 
     if !store_path.exists() {
         log::info!("fetching dependency {} {}...", entry.name, entry.version);
@@ -21,21 +22,12 @@ pub fn ensure_dep_installed(dep_name: &str, repo_urls: &[String]) -> Result<()> 
 
     let db = Database::open()?;
     if db
-        .find_package_by_store_path(&store_path.display().to_string())?
+        .find_package_by_name_and_version(&entry.name, &entry.version)?
         .is_none()
     {
-        let dep_paths = dep_store_paths(repo_urls, &entry.run_deps);
-        db.insert_package(
-            &entry.name,
-            &entry.version,
-            &entry.description,
-            &entry.category,
-            &entry.store_name,
-            &store_path.display().to_string(),
-            entry.icon.as_deref(),
-            None,
-            &dep_paths,
-        )?;
+        let run_deps = run_dependencies(&entry);
+        let dep_paths = dep_store_paths(repo_urls, &run_deps);
+        db.insert_package(&entry, &dep_paths)?;
     }
 
     Ok(())

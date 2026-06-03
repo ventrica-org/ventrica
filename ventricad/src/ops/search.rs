@@ -1,20 +1,8 @@
-use serde::{Deserialize, Serialize};
-use ventrica::repo::search_repos;
+use ventrica::repo::{mark_package_installed, mark_package_not_installed, search_repos};
+use ventrica::schema::kdl::Package;
 use ventrica::store::db::Database;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SearchResult {
-    pub repo: String,
-    pub name: String,
-    pub version: String,
-    pub description: Option<String>,
-    pub run_deps: Vec<String>,
-    pub installed: bool,
-}
-
-pub fn search(
-    query: &str,
-) -> ventrica::Result<Vec<SearchResult>> {
+pub fn search(query: &str) -> ventrica::Result<Vec<Package>> {
     let db = Database::open()?;
     let repos = db.list_repos()?;
 
@@ -22,23 +10,21 @@ pub fn search(
         return Ok(Vec::new());
     }
 
-    let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
+    let repo_urls: Vec<String> = repos.iter().filter_map(|r| r.url.clone()).collect();
     let results = search_repos(query, &repo_urls)?;
-    let installed = db.list_packages()?;
+    let installed = db.list_packages_manifest()?;
 
     Ok(results
         .into_iter()
         .map(|r| {
-            let is_installed = installed.iter().any(|p| p.name == r.entry.name);
-            let description = Some(r.entry.description.clone()).filter(|s: &String| !s.is_empty());
-            SearchResult {
-                repo: r.repo_name,
-                name: r.entry.name,
-                version: r.entry.version,
-                description,
-                run_deps: r.entry.run_deps,
-                installed: is_installed,
+            let mut package = r;
+            if installed.iter().any(|p| p.name == package.name) {
+                mark_package_installed(&mut package);
+            } else {
+                mark_package_not_installed(&mut package);
             }
+
+            package
         })
         .collect())
 }

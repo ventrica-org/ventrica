@@ -7,10 +7,14 @@ pub struct ShellDriver;
 
 impl BuildDriver for ShellDriver {
     fn run(&self, ctx: &BuildContext<'_>) -> Result<()> {
-        let script_tmpl = ctx.spec.run.as_deref().ok_or_else(|| Error::BuildFailed {
-            name: ctx.name.into(),
-            reason: "shell build system requires a 'run' script in the recipe".into(),
-        })?;
+        let script_tmpl = if ctx.spec.build.trim().is_empty() {
+            Err(Error::BuildFailed {
+                name: ctx.name.into(),
+                reason: "shell build system requires a non-empty build script in the recipe".into(),
+            })
+        } else {
+            Ok(ctx.spec.build.as_str())
+        }?;
 
         let vars = Environment {
             destdir: ctx.dest.to_str().unwrap_or_default(),

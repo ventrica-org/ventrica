@@ -12,13 +12,18 @@ pub fn update_repos() -> ventrica::Result<()> {
 
     let mut errors = 0usize;
     for repo in &repos {
-        log::info!("updating '{}' ({})...", repo.name, repo.url);
-        match refresh_manifest_cache(&repo.url) {
-            Ok(m) => log::info!("    {} package(s) cached", m.packages.len()),
-            Err(e) => {
-                log::info!("    {e}");
-                errors += 1;
+        log::info!("updating '{}' ({:?})...", repo.name, repo.url);
+        if let Some(url) = &repo.url {
+            match refresh_manifest_cache(url) {
+                Ok(m) => log::info!("    {} package(s) cached", m.packages.len()),
+                Err(e) => {
+                    log::info!("    {e}");
+                    errors += 1;
+                }
             }
+        } else {
+            log::info!("    no URL configured");
+            errors += 1;
         }
     }
 

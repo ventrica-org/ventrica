@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use rusqlite::{Connection, OptionalExtension, params};
-use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+use crate::schema::kdl::{Generation, Package, Repo};
 
 const SCHEMA: &str = r#"
 PRAGMA journal_mode = WAL;
@@ -15,11 +15,9 @@ CREATE TABLE IF NOT EXISTS packages (
     version               TEXT    NOT NULL,
     description           TEXT    NOT NULL,
     category              TEXT    NOT NULL,
-    store_name            TEXT    NOT NULL,
-    store_path            TEXT    NOT NULL UNIQUE,
     installed_at          INTEGER NOT NULL,
     icon                  TEXT,
-    native_description    TEXT,
+    native_depiction      TEXT,
     run_dep_store_paths   TEXT    NOT NULL DEFAULT '[]'
 );
 
@@ -36,7 +34,7 @@ CREATE TABLE IF NOT EXISTS generation_packages (
     PRIMARY KEY (generation_id, package_id)
 );
 
--- Single-row table: current active generation (0 = none).
+-- Single: current active generation (0 = none).
 CREATE TABLE IF NOT EXISTS current_generation (
     singleton         INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
     generation_number INTEGER NOT NULL DEFAULT 0
@@ -47,42 +45,9 @@ CREATE TABLE IF NOT EXISTS repositories (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL,
     url        TEXT NOT NULL UNIQUE,
-    added_at   INTEGER NOT NULL
+    installed_at   INTEGER NOT NULL
 );
 "#;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageRecord {
-    pub id: i64,
-    pub name: String,
-    pub version: String,
-    pub description: String,
-    pub category: String,
-    pub store_name: String,
-    pub store_path: String,
-    pub installed_at: i64,
-    pub icon: Option<String>,
-    pub native_description: Option<String>,
-    pub run_dep_store_paths: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RepoRecord {
-    pub id: i64,
-    pub name: String,
-    pub url: String,
-    pub added_at: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerationRecord {
-    pub id: i64,
-    pub number: u32,
-    pub created_at: i64,
-    pub description: Option<String>,
-    pub current: bool,
-    pub packages: Vec<PackageRecord>,
-}
 
 pub struct Database {
     conn: Connection,
@@ -91,7 +56,7 @@ pub struct Database {
 impl Database {
     pub fn open() -> Result<Self> {
         let root = Path::new(crate::store::STORE_ROOT);
-        std::fs::create_dir_all(root).map_err(|e| Error::path(root, e.to_string()))?;
+        std::fs::create_dir_all(root)?;
         let db_path = root.join("ventrica.db");
         let conn = Connection::open(&db_path)?;
         conn.execute_batch(SCHEMA)?;
@@ -100,17 +65,20 @@ impl Database {
 
     pub fn insert_package(
         &self,
-        name: &str,
-        version: &str,
-        description: &str,
-        category: &str,
-        store_name: &str,
-        store_path: &str,
-        icon: Option<&str>,
-        native_description: Option<&str>,
-        run_dep_store_paths: &[String],
-    ) -> Result<PackageRecord> {
-        if self.find_package_by_store_path(store_path)?.is_some() {
+        package: &Package,
+        run_dep_store_paths: &[(String, String)],
+    ) -> Result<()> {
+        let name = package.name.as_str();
+        let version = package.version.as_str();
+        let description = package.description.as_str();
+        let category = package.category.as_deref().unwrap_or_default();
+        let icon = package.icon.as_deref();
+        let native_depiction = package.native_depiction.as_deref();
+
+        if self
+            .find_package_by_name_and_version(name, version)?
+            .is_some()
+        {
             return Err(Error::AlreadyInstalled {
                 name: name.into(),
                 version: version.into(),
@@ -120,24 +88,11 @@ impl Database {
         let deps_json = serde_json::to_string(run_dep_store_paths).unwrap_or_else(|_| "[]".into());
         let now = unix_now();
         self.conn.execute(
-            "INSERT INTO packages (name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![name, version, description, category, store_name, store_path, now, icon, native_description, deps_json],
+            "INSERT INTO packages (name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![name, version, description, category, now, icon, native_depiction, deps_json],
         )?;
-        let id = self.conn.last_insert_rowid();
-        Ok(PackageRecord {
-            id,
-            name: name.into(),
-            version: version.into(),
-            description: description.into(),
-            category: category.into(),
-            store_name: store_name.into(),
-            store_path: store_path.into(),
-            installed_at: now,
-            icon: icon.map(str::to_owned),
-            native_description: native_description.map(str::to_owned),
-            run_dep_store_paths: run_dep_store_paths.to_vec(),
-        })
+        Ok(())
     }
 
     pub fn remove_package(&self, name: &str) -> Result<()> {
@@ -150,10 +105,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn find_package(&self, name: &str) -> Result<Option<PackageRecord>> {
+    pub fn find_package(&self, name: &str) -> Result<Option<Package>> {
         let row = self.conn
             .query_row(
-                "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
+                "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
                     FROM packages WHERE name = ?1 LIMIT 1",
                 params![name],
                 row_to_package,
@@ -162,21 +117,29 @@ impl Database {
         Ok(row)
     }
 
-    pub fn find_package_by_store_path(&self, store_path: &str) -> Result<Option<PackageRecord>> {
+    pub fn find_package_by_name_and_version(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<Option<Package>> {
         self.conn
             .query_row(
-                "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
-                 FROM packages WHERE store_path = ?1",
-                params![store_path],
+                "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
+                 FROM packages WHERE name = ?1 AND version = ?2",
+                params![name, version],
                 row_to_package,
             )
             .optional()
             .map_err(Into::into)
     }
 
-    pub fn list_packages(&self) -> Result<Vec<PackageRecord>> {
+    pub fn find_package_manifest(&self, name: &str) -> Result<Option<Package>> {
+        self.find_package(name)
+    }
+
+    pub fn list_packages(&self) -> Result<Vec<Package>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
+            "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
              FROM packages ORDER BY name, version",
         )?;
         let rows = stmt
@@ -185,11 +148,34 @@ impl Database {
         Ok(rows)
     }
 
+    pub fn list_packages_manifest(&self) -> Result<Vec<Package>> {
+        self.list_packages()
+    }
+
+    pub fn package_dependency_store_paths(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<Vec<(String, String)>> {
+        self.conn
+            .query_row(
+                "SELECT run_dep_store_paths FROM packages WHERE name = ?1 AND version = ?2 LIMIT 1",
+                params![name, version],
+                |row| {
+                    let deps_json: String = row.get(0)?;
+                    Ok(serde_json::from_str(&deps_json).unwrap_or_default())
+                },
+            )
+            .optional()
+            .map(|opt| opt.unwrap_or_default())
+            .map_err(Into::into)
+    }
+
     pub fn create_generation(
         &self,
         package_ids: &[i64],
         description: Option<&str>,
-    ) -> Result<GenerationRecord> {
+    ) -> Result<Generation> {
         let number = self.next_generation_number()?;
         let now = unix_now();
 
@@ -215,17 +201,16 @@ impl Database {
 
         tx.commit()?;
 
-        Ok(GenerationRecord {
+        Ok(Generation {
             id: gen_id,
             number,
             created_at: now,
             description: description.map(ToOwned::to_owned),
-            current: false,
-            packages: vec![],
+            ..Default::default()
         })
     }
 
-    pub fn get_generation(&self, number: u32) -> Result<GenerationRecord> {
+    pub fn get_generation(&self, number: u32) -> Result<Generation> {
         let rec = self
             .conn
             .query_row(
@@ -238,7 +223,7 @@ impl Database {
         Ok(rec)
     }
 
-    pub fn list_generations(&self) -> Result<Vec<GenerationRecord>> {
+    pub fn list_generations(&self) -> Result<Vec<Generation>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, number, created_at, description FROM generations ORDER BY number",
         )?;
@@ -248,9 +233,9 @@ impl Database {
         Ok(rows)
     }
 
-    pub fn packages_in_generation(&self, generation_number: u32) -> Result<Vec<PackageRecord>> {
+    pub fn packages_in_generation(&self, generation_number: u32) -> Result<Vec<Package>> {
         let mut stmt = self.conn.prepare(
-            "SELECT p.id, p.name, p.version, p.description, p.category, p.store_name, p.store_path, p.installed_at, p.icon, p.native_description, p.run_dep_store_paths \
+            "SELECT p.id, p.name, p.version, p.description, p.category, p.installed_at, p.icon, p.native_depiction, p.run_dep_store_paths \
              FROM packages p \
              JOIN generation_packages gp ON gp.package_id = p.id \
              JOIN generations g ON g.id = gp.generation_id \
@@ -261,6 +246,10 @@ impl Database {
             .query_map(params![generation_number], row_to_package)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
+    }
+
+    pub fn packages_in_generation_manifest(&self, generation_number: u32) -> Result<Vec<Package>> {
+        self.packages_in_generation(generation_number)
     }
 
     pub fn current_generation_number(&self) -> Result<u32> {
@@ -293,26 +282,13 @@ impl Database {
         Ok(max.unwrap_or(0) + 1)
     }
 
-    pub fn add_repo(&self, name: &str, url: &str) -> Result<RepoRecord> {
+    pub fn add_repo(&self, name: &str, url: &str) -> Result<()> {
         let now = unix_now();
         self.conn.execute(
-            "INSERT OR IGNORE INTO repositories (name, url, added_at) VALUES (?1, ?2, ?3)",
+            "INSERT OR IGNORE INTO repositories (name, url, installed_at) VALUES (?1, ?2, ?3)",
             params![name, url, now],
         )?;
-
-        let rec = self.conn.query_row(
-            "SELECT id, name, url, added_at FROM repositories WHERE url = ?1",
-            params![url],
-            |row| {
-                Ok(RepoRecord {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    url: row.get(2)?,
-                    added_at: row.get(3)?,
-                })
-            },
-        )?;
-        Ok(rec)
+        Ok(())
     }
 
     pub fn remove_repo(&self, url: &str) -> Result<()> {
@@ -321,17 +297,18 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_repos(&self) -> Result<Vec<RepoRecord>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, url, added_at FROM repositories ORDER BY added_at")?;
+    pub fn list_repos(&self) -> Result<Vec<Repo>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, url, installed_at FROM repositories ORDER BY installed_at",
+        )?;
         let rows = stmt
             .query_map([], |row| {
-                Ok(RepoRecord {
+                Ok(Repo {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     url: row.get(2)?,
-                    added_at: row.get(3)?,
+                    installed_at: row.get(3)?,
+                    ..Default::default()
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -339,32 +316,29 @@ impl Database {
     }
 }
 
-fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<PackageRecord> {
-    let deps_json: String = row.get(10).unwrap_or_else(|_| "[]".to_owned());
-    let run_dep_store_paths: Vec<String> = serde_json::from_str(&deps_json).unwrap_or_default();
-    Ok(PackageRecord {
+fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<Package> {
+    Ok(Package {
         id: row.get(0)?,
         name: row.get(1)?,
         version: row.get(2)?,
         description: row.get(3)?,
         category: row.get(4)?,
-        store_name: row.get(5)?,
-        store_path: row.get(6)?,
-        installed_at: row.get(7)?,
-        icon: row.get(8)?,
-        native_description: row.get(9)?,
-        run_dep_store_paths,
+        installed_at: row.get(5)?,
+        icon: row.get(6)?,
+        native_depiction: row.get(7)?,
+        is_installed: Some(true),
+        dependencies: None,
+        ..Default::default()
     })
 }
 
-fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<GenerationRecord> {
-    Ok(GenerationRecord {
+fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<Generation> {
+    Ok(Generation {
         id: row.get(0)?,
         number: row.get(1)?,
         created_at: row.get(2)?,
         description: row.get(3)?,
-        current: false,
-        packages: vec![],
+        ..Default::default()
     })
 }
 
