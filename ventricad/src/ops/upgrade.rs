@@ -1,5 +1,6 @@
 use ventrica::error::Result;
-use ventrica::repo::{check_updates, dep_store_paths, install_from_repo};
+use ventrica::repo::{check_updates, dep_store_paths, install_from_repo, run_dependencies};
+use ventrica::store::simple_store_name;
 use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
@@ -42,25 +43,27 @@ pub fn upgrade(names: &[String]) -> Result<()> {
             candidate.available_version
         );
 
-        for dep in &candidate.entry.run_deps {
-            ensure_dep_installed(dep, &repo_urls)?;
+        for dep in run_dependencies(&candidate.package) {
+            ensure_dep_installed(&dep, &repo_urls)?;
         }
 
-        let store_path = install_from_repo(&candidate.repo_url, &candidate.entry)?;
+        let store_path = install_from_repo(&candidate.repo_url, &candidate.package)?;
 
         db.remove_package(&candidate.name)?;
 
-        let dep_store_paths = dep_store_paths(&repo_urls, &candidate.entry.run_deps);
+        let run_deps = run_dependencies(&candidate.package);
+        let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
+        let store_name = simple_store_name(&candidate.package.name, &candidate.package.version);
 
         db.insert_package(
-            &candidate.entry.name,
-            &candidate.entry.version,
-            &candidate.entry.description,
-            &candidate.entry.category,
-            &candidate.entry.store_name,
+            &candidate.package.name,
+            &candidate.package.version,
+            &candidate.package.description,
+            candidate.package.category.as_deref().unwrap_or_default(),
+            &store_name,
             &store_path.display().to_string(),
-            candidate.entry.icon.as_deref(),
-            None,
+            candidate.package.icon.as_deref(),
+            candidate.package.native_depiction.as_deref(),
             &dep_store_paths,
         )?;
 

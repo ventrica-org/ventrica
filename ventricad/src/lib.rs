@@ -2,7 +2,6 @@ pub mod ops;
 pub mod protocol;
 
 pub use protocol::{DEFAULT_SOCKET, Message, Request, SOCKET_ENV};
-pub use ventrica::repo::PackageEntry;
 pub use ventrica::{GenerationRecord, Package, PackageRecord, RepoRecord};
 
 use std::io::{BufRead, BufReader, Write};

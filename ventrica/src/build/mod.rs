@@ -10,8 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::error::{Error, Result};
-use crate::schema::Build;
-use crate::schema::package::{BuildSystem, Package, Source};
+use crate::schema::kdl::{Package, Scripts};
 use crate::store::{LIVE_PREFIX, atomic_move, seal, simple_store_path, unseal};
 
 use context::{BuildContext, build_env, chown_scratch};
@@ -49,18 +48,18 @@ impl<'a> Builder<'a> {
     /// `/ventrica/store/<name>-<version>`.
     #[must_use]
     pub fn store_path(&self) -> PathBuf {
-        simple_store_path(&self.pkg.meta.name, &self.pkg.meta.version)
+        simple_store_path(&self.pkg.name, &self.pkg.version)
     }
 
     pub fn build_to_store(&self) -> Result<PathBuf> {
         let sp = self.store_path();
 
-        log::info!("{} {}", self.pkg.meta.name, self.pkg.meta.version);
+        log::info!("{} {}", self.pkg.name, self.pkg.version);
         log::info!("store: {}", sp.display());
 
-        if self.pkg.meta.broken {
+        if self.pkg.is_disabled.unwrap_or(false) {
             return Err(Error::BuildFailed {
-                name: self.pkg.meta.name.clone(),
+                name: self.pkg.name.clone(),
                 reason: "recipe is marked broken".into(),
             });
         }
@@ -84,13 +83,13 @@ impl<'a> Builder<'a> {
 
     fn run_pipeline(&self, store_dest: &Path) -> Result<PathBuf> {
         let pkg = self.pkg;
-        let name = &pkg.meta.name;
+        let name = &pkg.name;
 
         // /tmp/ventrica-<name>-<version>-<pid>
         let scratch_raw = PathBuf::from("/tmp").join(format!(
             "ventrica-{}-{}-{}",
             name,
-            pkg.meta.version,
+            pkg.version,
             std::process::id()
         ));
 
@@ -125,15 +124,16 @@ impl<'a> Builder<'a> {
 
         log::info!("source ready at {}", source_root.display());
 
-        if let Some(b) = &pkg.build {
-            apply_patches(b, &source_root, name, self.recipe_dir.as_deref())?;
+        if let Some(scripts) = &pkg.scripts {
+            apply_patches(scripts, &source_root, name, self.recipe_dir.as_deref())?;
         }
 
         log::info!("patches applied");
 
-        if let Some(build_spec) = &pkg.build {
-            if build_spec.system != BuildSystem::None {
-                let env = build_env(&build_spec.env);
+        if let Some(build_spec) = &pkg.scripts {
+            if build_spec.system.as_deref().unwrap_or("shell") != "none" {
+                let recipe_env = std::collections::HashMap::new();
+                let env = build_env(&recipe_env);
 
                 let sandboxed = sandbox::sandbox_exec_available();
                 let ctx = BuildContext {
@@ -143,13 +143,13 @@ impl<'a> Builder<'a> {
                     scratch: &scratch,
                     env: &env,
                     spec: build_spec,
-                    name: &pkg.meta.name,
+                    name: &pkg.name,
                     prefix: LIVE_PREFIX,
                     sandboxed,
                     build_user: self.build_user,
                 };
                 log::debug!("build context: {:#?}", ctx);
-                drivers::dispatch(ctx.spec.system, &ctx)?;
+                drivers::dispatch(ctx.spec.system.as_deref(), &ctx)?;
             }
         }
 
@@ -177,18 +177,27 @@ impl<'a> Builder<'a> {
     fn fetch_source(&self, src_dir: &Path, archive_dir: &Path) -> Result<PathBuf> {
         use download::{extract, fetch_and_verify};
 
-        match &self.pkg.src {
-            Source::None => {
+        match &self.pkg.source {
+            None => {
                 fs::create_dir_all(src_dir)?;
                 Ok(src_dir.to_owned())
             }
-            Source::Fetch(f) => {
-                let archive = fetch_and_verify(&f.url, &f.sha256, &f.mirrors, archive_dir)?;
-                let candidate = extract(&archive, src_dir, f.kind.as_deref())?;
+            Some(source) => {
+                let url = source.url.first().ok_or_else(|| Error::BuildFailed {
+                    name: self.pkg.name.clone(),
+                    reason: "source URLs are empty".into(),
+                })?;
+                let mirrors: Vec<String> = source.url.iter().skip(1).cloned().collect();
+                let expected = source
+                    .sha256
+                    .strip_prefix("sha256:")
+                    .unwrap_or(&source.sha256);
+                let archive = fetch_and_verify(url, expected, &mirrors, archive_dir)?;
+                let candidate = extract(&archive, src_dir, None)?;
                 if candidate.is_dir() {
                     Ok(candidate)
                 } else {
-                    let url_basename = f.url.rsplit('/').next().unwrap_or("source");
+                    let url_basename = url.rsplit('/').next().unwrap_or("source");
                     let url_basename = url_basename.split('?').next().unwrap_or(url_basename);
                     let dest = src_dir.join(url_basename);
                     if candidate != dest {
@@ -197,21 +206,18 @@ impl<'a> Builder<'a> {
                     Ok(src_dir.to_owned())
                 }
             }
-            Source::Git(_) => Err(Error::BuildFailed {
-                name: self.pkg.meta.name.clone(),
-                reason: "git sources are not yet supported".into(),
-            }),
         }
     }
 }
 
 fn apply_patches(
-    build: &Build,
+    scripts: &Scripts,
     work_dir: &Path,
     name: &str,
     recipe_dir: Option<&Path>,
 ) -> Result<()> {
-    for patch in &build.patches {
+    let patches = scripts.patches.as_deref().unwrap_or(&[]);
+    for patch in patches {
         let patch_path = if let Some(dir) = recipe_dir {
             let p = std::path::Path::new(patch);
             if p.is_absolute() {

@@ -4,7 +4,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 
 use ventricad::{DEFAULT_SOCKET, DaemonClient, Message, Request};
-use ventricad::{PackageEntry, RepoRecord};
+use ventricad::{Package, RepoRecord};
 
 #[repr(C)]
 pub struct VentPackage {
@@ -367,6 +367,7 @@ pub unsafe extern "C" fn ventrica_list_packages(
             let items: Vec<*mut VentPackage> = rows
                 .iter()
                 .map(|r| {
+                    let pkg = r.get("package").unwrap_or(r);
                     let dep_names: Vec<&str> = r["run_dep_store_paths"]
                         .as_array()
                         .map(|a| {
@@ -379,16 +380,16 @@ pub unsafe extern "C" fn ventrica_list_packages(
                     let (dep_names_ptr, dep_names_count) = make_cstr_array(dep_names.into_iter());
                     Box::into_raw(Box::new(VentPackage {
                         id: r["id"].as_i64().unwrap_or(0),
-                        name: cs(r["name"].as_str().unwrap_or("")),
-                        version: cs(r["version"].as_str().unwrap_or("")),
-                        description: cs(r["description"].as_str().unwrap_or("")),
-                        category: cs(r["category"].as_str().unwrap_or("")),
+                        name: cs(pkg["name"].as_str().unwrap_or("")),
+                        version: cs(pkg["version"].as_str().unwrap_or("")),
+                        description: cs(pkg["description"].as_str().unwrap_or("")),
+                        category: cs(pkg["category"].as_str().unwrap_or("")),
                         store_name: cs(r["store_name"].as_str().unwrap_or("")),
                         store_path: cs(r["store_path"].as_str().unwrap_or("")),
                         installed_at: r["installed_at"].as_i64().unwrap_or(0),
-                        icon: cs_opt(r["icon"].as_str().map(str::to_owned)),
+                        icon: cs_opt(pkg["icon"].as_str().map(str::to_owned)),
                         native_description: cs_opt(
-                            r["native_description"].as_str().map(str::to_owned),
+                            pkg["native_depiction"].as_str().map(str::to_owned),
                         ),
                         run_dep_names: dep_names_ptr,
                         run_dep_names_count: dep_names_count,
@@ -561,11 +562,12 @@ pub unsafe extern "C" fn ventrica_search(
             let items: Vec<*mut VentSearchResult> = rows
                 .iter()
                 .map(|r| {
+                    let pkg = r.get("package").unwrap_or(r);
                     Box::into_raw(Box::new(VentSearchResult {
                         repo_url: cs(""),
                         repo_name: cs(r["repo"].as_str().unwrap_or("")),
-                        name: cs(r["name"].as_str().unwrap_or("")),
-                        version: cs(r["version"].as_str().unwrap_or("")),
+                        name: cs(pkg["name"].as_str().unwrap_or("")),
+                        version: cs(pkg["version"].as_str().unwrap_or("")),
                         store_name: cs(""),
                         filename: cs(""),
                         var_hash: cs(""),
@@ -601,14 +603,24 @@ pub unsafe extern "C" fn ventrica_list_repo_packages(
             -1
         }
         Ok(data) => {
-            let rows: Vec<PackageEntry> = data
+            let rows: Vec<Package> = data
                 .and_then(|v| serde_json::from_value(v).ok())
                 .unwrap_or_default();
             let items: Vec<*mut VentRepoPackage> = rows
                 .into_iter()
                 .map(|r| {
-                    let mut deps: Vec<*const c_char> =
-                        r.run_deps.into_iter().map(|s| cs(s)).collect();
+                    let run_deps: Vec<String> = r
+                        .dependencies
+                        .as_ref()
+                        .map(|deps| {
+                            deps.dep
+                                .iter()
+                                .filter(|d| !d.is_build.unwrap_or(false))
+                                .map(|d| d.name.clone())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let mut deps: Vec<*const c_char> = run_deps.into_iter().map(cs).collect();
                     deps.shrink_to_fit();
                     let count = deps.len();
                     let run_deps = if count == 0 {
@@ -619,16 +631,17 @@ pub unsafe extern "C" fn ventrica_list_repo_packages(
                         std::mem::forget(deps);
                         ptr
                     };
+                    let store_name = format!("{}-{}", r.name, r.version);
                     Box::into_raw(Box::new(VentRepoPackage {
                         name: cs(r.name),
                         version: cs(r.version),
                         description: cs(r.description),
-                        category: cs(r.category),
+                        category: cs(r.category.unwrap_or_default()),
                         icon: cs_opt(r.icon),
-                        native_description: std::ptr::null(),
-                        store_name: cs(r.store_name),
-                        filename: cs(r.filename),
-                        var_hash: cs(r.var_hash),
+                        native_description: cs_opt(r.native_depiction),
+                        store_name: cs(store_name),
+                        filename: cs(""),
+                        var_hash: cs(r.package_hash.unwrap_or_default()),
                         run_deps,
                         run_deps_count: count,
                     }))

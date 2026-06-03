@@ -4,8 +4,10 @@ use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Repo {
+    /// The time when the package was installed.
+    pub installed_at: Option<String>,
     /// The name of the repository.
     pub name: String,
     /// The description of the repository.
@@ -19,12 +21,12 @@ pub struct Repo {
 }
 
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 struct Root {
     package: Package,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Package {
     /// If package is installed.
     pub is_installed: Option<bool>,
@@ -32,8 +34,10 @@ pub struct Package {
     pub is_cached: Option<bool>,
     /// If package is disabled.
     pub is_disabled: Option<bool>,
-    /// Hash of the package.
+    /// The hash of the package.
     pub package_hash: Option<String>,
+    /// The time when the package was installed.
+    pub installed_at: Option<String>,
     /// The name of the package.
     pub name: String,
     /// The version of the package.
@@ -57,12 +61,12 @@ pub struct Package {
     /// The source information of the package.
     pub source: Option<Source>,
     /// The autobump configuration of the package.
-    pub(crate) autobump: Option<Autobump>,
+    pub autobump: Option<Autobump>,
     /// The scripts for building the package.
     pub scripts: Option<Scripts>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Dependency {
     /// The name of the dependency.
     pub name: String,
@@ -74,29 +78,29 @@ pub struct Dependency {
     pub(crate) package_hash: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Dependencies {
     /// The dependencies of the package.
     pub dep: Vec<Dependency>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Source {
     /// The URLs to the source of the package.
-    url: Vec<String>,
+    pub url: Vec<String>,
     /// The SHA256 hash of the source archive.
-    sha256: String,
+    pub sha256: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub(crate) struct Autobump {
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct Autobump {
     /// The URL to check for new versions of the package.
-    pub(crate) url: String,
+    pub url: String,
     /// The regex to extract the version number from the URL.
-    pub(crate) regex: String,
+    pub regex: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Scripts {
     /// The build script for the package.
     pub system: Option<String>,

@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use std::os::unix::process::CommandExt as _;
 
 use crate::error::{Error, Result};
-use crate::schema::package::Build;
+use crate::schema::kdl::Scripts;
 
 #[derive(Debug)]
 pub struct BuildContext<'a> {
@@ -21,7 +21,7 @@ pub struct BuildContext<'a> {
     /// Fully-resolved environment for child processes.
     pub env: &'a HashMap<String, String>,
     /// Resolved recipe `build` section.
-    pub spec: &'a Build,
+    pub spec: &'a Scripts,
     /// Package name (used in error messages and log output).
     pub name: &'a str,
     /// Install prefix embedded in binaries/dylibs at build time (`/ventrica/live`).

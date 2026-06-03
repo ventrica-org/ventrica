@@ -1,5 +1,7 @@
 use ventrica::error::{Error, Result};
-use ventrica::repo::{PackageEntry, dep_store_paths, find_in_repos, install_from_repo};
+use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo, run_dependencies};
+use ventrica::schema::kdl::Package;
+use ventrica::store::simple_store_name;
 use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
@@ -23,7 +25,7 @@ pub fn install(names: &[String]) -> Result<()> {
 
     let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
 
-    let mut resolved: Vec<(String, PackageEntry)> = Vec::new();
+    let mut resolved: Vec<(String, Package)> = Vec::new();
     for name in names {
         let (base_url, entry) = find_in_repos(name, &repo_urls)?
             .ok_or_else(|| Error::PackageNotFound { name: name.clone() })?;
@@ -43,7 +45,7 @@ pub fn install(names: &[String]) -> Result<()> {
     }
 
     for (_, entry) in &resolved {
-        for dep in entry.run_deps.clone() {
+        for dep in run_dependencies(entry) {
             ensure_dep_installed(&dep, &repo_urls)?;
         }
     }
@@ -58,17 +60,19 @@ pub fn install(names: &[String]) -> Result<()> {
             db.remove_package(&existing.name)?;
         }
 
-        let dep_store_paths = dep_store_paths(&repo_urls, &entry.run_deps);
+        let run_deps = run_dependencies(entry);
+        let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
+        let store_name = simple_store_name(&entry.name, &entry.version);
 
         let record = db.insert_package(
             &entry.name,
             &entry.version,
             &entry.description,
-            &entry.category,
-            &entry.store_name,
+            entry.category.as_deref().unwrap_or_default(),
+            &store_name,
             &store_path.display().to_string(),
             entry.icon.as_deref(),
-            None,
+            entry.native_depiction.as_deref(),
             &dep_store_paths,
         )?;
         new_records.push(record);

@@ -15,48 +15,34 @@ use crate::schema::kdl::Repo;
 pub const MANIFEST_FILE: &str = "manifest.msgpack";
 pub const MANIFEST_HASH_FILE: &str = "manifest.msgpack.sha256";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageEntry {
-    pub name: String,
-    pub version: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub description: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub category: String,
-    pub store_name: String,
-    /// Empty for source-only packages.
-    pub filename: String,
-    /// Empty for source-only packages.
-    pub var_hash: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub run_deps: Vec<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub icon: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recipe_content: Option<String>,
+pub fn mark_package_installed(package: &mut Package, package_hash: Option<String>) {
+    package.is_installed = Some(true);
+    package.package_hash = package_hash;
 }
 
-impl From<&Package> for PackageEntry {
-    fn from(p: &Package) -> Self {
-        PackageEntry {
-            name: p.meta.name.clone(),
-            version: p.meta.version.clone(),
-            description: p.meta.description.clone(),
-            category: p.meta.category.clone(),
-            store_name: p.store_name.clone().unwrap_or_default(),
-            filename: p.filename.clone().unwrap_or_default(),
-            var_hash: p.var_hash.clone().unwrap_or_default(),
-            run_deps: p.deps.run.clone(),
-            icon: p.meta.icon.clone(),
-            recipe_content: None,
-        }
-    }
+pub fn mark_package_not_installed(package: &mut Package) {
+    package.is_installed = Some(false);
+    package.package_hash = None;
+}
+
+pub fn run_dependencies(package: &Package) -> Vec<String> {
+    package
+        .dependencies
+        .as_ref()
+        .map(|deps| {
+            deps.dep
+                .iter()
+                .filter(|d| !d.is_build.unwrap_or(false))
+                .map(|d| d.name.clone())
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Manifest {
-    pub repo: RepoMeta,
-    pub packages: Vec<PackageEntry>,
+    pub repo: Repo,
+    pub packages: Vec<Package>,
 }
 
 #[derive(Debug, Clone)]
@@ -65,14 +51,14 @@ pub struct UpdateCandidate {
     pub installed_version: String,
     pub available_version: String,
     pub repo_url: String,
-    pub entry: PackageEntry,
+    pub package: Package,
 }
 
 #[derive(Debug)]
 pub struct SearchResult {
     pub repo_url: String,
     pub repo_name: String,
-    pub entry: PackageEntry,
+    pub package: Package,
 }
 
 pub fn encode_manifest(manifest: &Manifest) -> Result<Vec<u8>> {
