@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use ventrica::store::{GENERATIONS_DIR, STORE_DIR, db::Database, unseal};
+use ventrica::store::{GENERATIONS_DIR, STORE_DIR, db::Database, simple_store_path, unseal};
 
 pub fn gc() -> ventrica::Result<()> {
     let db = Database::open()?;
@@ -23,8 +23,16 @@ pub fn gc() -> ventrica::Result<()> {
     let mut referenced: HashSet<String> = HashSet::new();
     if current > 0 {
         for pkg in db.packages_in_generation(current)? {
-            referenced.insert(pkg.store_path.clone());
-            referenced.extend(pkg.run_dep_store_paths);
+            referenced.insert(
+                simple_store_path(&pkg.name, &pkg.version)
+                    .display()
+                    .to_string(),
+            );
+            referenced.extend(
+                db.package_dependency_store_paths(&pkg.name, &pkg.version)?
+                    .into_iter()
+                    .map(|(name, version)| simple_store_path(&name, &version).display().to_string()),
+            );
         }
     }
 

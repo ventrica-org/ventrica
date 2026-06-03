@@ -22,16 +22,15 @@ pub fn install(names: &[String]) -> Result<()> {
         });
     }
 
-    let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
+    let repo_urls: Vec<String> = repos.iter().filter_map(|r| r.url.clone()).collect();
 
     let mut resolved: Vec<(String, Package)> = Vec::new();
     for name in names {
         let (base_url, entry) = find_in_repos(name, &repo_urls)?
             .ok_or_else(|| Error::PackageNotFound { name: name.clone() })?;
 
-        let expected = ventrica::store::simple_store_path(&entry.name, &entry.version);
         if db
-            .find_package_by_store_path(&expected.display().to_string())?
+            .find_package_by_name_and_version(&entry.name, &entry.version)?
             .is_some()
         {
             return Err(Error::AlreadyInstalled {
@@ -52,7 +51,7 @@ pub fn install(names: &[String]) -> Result<()> {
     for (base_url, entry) in &resolved {
         log::info!("installing {} {}...", entry.name, entry.version);
 
-        let store_path = install_from_repo(base_url, entry)?;
+        install_from_repo(base_url, entry)?;
 
         if let Some(existing) = db.find_package(&entry.name)? {
             db.remove_package(&existing.name)?;
@@ -61,7 +60,7 @@ pub fn install(names: &[String]) -> Result<()> {
         let run_deps = run_dependencies(entry);
         let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
 
-        db.insert_package(entry, &store_path.display().to_string(), &dep_store_paths)?;
+        db.insert_package(entry, &dep_store_paths)?;
     }
 
     let all_pkgs = db.list_packages()?;

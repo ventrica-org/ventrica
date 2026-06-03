@@ -10,7 +10,7 @@ pub fn search(query: &str) -> ventrica::Result<Vec<Package>> {
         return Ok(Vec::new());
     }
 
-    let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
+    let repo_urls: Vec<String> = repos.iter().filter_map(|r| r.url.clone()).collect();
     let results = search_repos(query, &repo_urls)?;
     let installed = db.list_packages_manifest()?;
 

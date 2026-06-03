@@ -95,7 +95,7 @@ pub fn topo_sort(packages: Vec<(PathBuf, Package)>) -> Result<Vec<(PathBuf, Pack
         let mut seen: HashSet<usize> = HashSet::new();
         if let Some(deps) = &pkg.dependencies {
             for dep in deps {
-                let Some(&j) = name_to_idx.get(dep.name.as_str()) else {
+                let Some(&j) = name_to_idx.get(dep.name.as_deref().unwrap_or_default()) else {
                     continue;
                 };
                 if seen.insert(j) {

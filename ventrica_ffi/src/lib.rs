@@ -3,7 +3,7 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 
-use ventricad::{DEFAULT_SOCKET, DaemonClient, Message, Request};
+use ventricad::{DEFAULT_SOCKET, DaemonClient, Message, Repo, Request};
 use ventricad::{Package, RepoRecord};
 
 #[repr(C)]
@@ -514,7 +514,7 @@ pub unsafe extern "C" fn ventrica_list_repos(
             -1
         }
         Ok(data) => {
-            let rows: Vec<RepoRecord> = data
+            let rows: Vec<Repo> = data
                 .and_then(|v| serde_json::from_value(v).ok())
                 .unwrap_or_default();
             let items: Vec<*mut VentRepo> = rows

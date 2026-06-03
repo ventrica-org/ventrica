@@ -15,7 +15,7 @@ pub fn upgrade(names: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    let repo_urls: Vec<String> = repos.iter().map(|r| r.url.clone()).collect();
+    let repo_urls: Vec<String> = repos.iter().filter_map(|r| r.url.clone()).collect();
 
     let all_installed = db.list_packages_manifest()?;
     let installed: std::collections::HashMap<String, String> = all_installed
@@ -55,18 +55,14 @@ pub fn upgrade(names: &[String]) -> Result<()> {
             }
         })?;
 
-        let store_path = install_from_repo(&repo_url, &candidate)?;
+        install_from_repo(&repo_url, &candidate)?;
 
         db.remove_package(&candidate.name)?;
 
         let run_deps = run_dependencies(&candidate);
         let dep_store_paths = dep_store_paths(&repo_urls, &run_deps);
 
-        db.insert_package(
-            candidate,
-            &store_path.display().to_string(),
-            &dep_store_paths,
-        )?;
+        db.insert_package(candidate, &dep_store_paths)?;
 
         log::info!(
             "upgraded {} {} -> {}",

@@ -11,19 +11,18 @@ use crate::store::{STORE_DIR, seal, sha256_file, simple_store_name};
 use super::remote::get_manifest;
 use super::run_dependencies;
 
-pub fn dep_store_paths(repo_urls: &[String], run_deps: &[String]) -> Vec<String> {
-    fn walk(repo_urls: &[String], name: &str, seen: &mut HashSet<String>, out: &mut Vec<String>) {
+pub fn dep_store_paths(repo_urls: &[String], run_deps: &[String]) -> Vec<(String, String)> {
+    fn walk(
+        repo_urls: &[String],
+        name: &str,
+        seen: &mut HashSet<String>,
+        out: &mut Vec<(String, String)>,
+    ) {
         if !seen.insert(name.to_owned()) {
             return;
         }
         if let Ok(Some((_, package))) = find_in_repos(name, repo_urls) {
-            let store_name = simple_store_name(&package.name, &package.version);
-            out.push(
-                Path::new(STORE_DIR)
-                    .join(store_name)
-                    .to_string_lossy()
-                    .into_owned(),
-            );
+            out.push((package.name.clone(), package.version.clone()));
             for d in run_dependencies(&package) {
                 walk(repo_urls, &d, seen, out);
             }

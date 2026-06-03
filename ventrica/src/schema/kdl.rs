@@ -3,13 +3,14 @@ use std::path::PathBuf;
 use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Generation {
     pub id: i64,
     pub number: u32,
     pub created_at: i64,
     pub description: Option<String>,
     pub current: bool,
+    pub packages: Vec<Package>,
 }
 
 impl Default for Generation {
@@ -20,13 +21,14 @@ impl Default for Generation {
             created_at: 0,
             description: None,
             current: false,
+            packages: Vec::new(),
         }
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Repo {
-    pub id: i64,
+    pub id: Option<i64>,
     pub url: Option<String>,
     pub installed_at: Option<String>,
     pub name: String,
@@ -39,10 +41,10 @@ pub struct Repo {
 impl Default for Repo {
     fn default() -> Self {
         Self {
-            id: 0,
+            id: None,
             url: None,
             installed_at: None,
-            name: "Unnamed".to_owned(),
+            name: "Untitled Repo".to_owned(),
             description: None,
             icon: None,
             homepage: None,
@@ -53,6 +55,7 @@ impl Default for Repo {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Package {
+    pub id: Option<i64>,
     pub is_installed: Option<bool>,
     pub is_cached: Option<bool>,
     pub is_disabled: Option<bool>,
@@ -77,9 +80,35 @@ pub struct Package {
     pub scripts: Option<Scripts>,
 }
 
+impl Default for Package {
+    fn default() -> Self {
+        Self {
+            id: None,
+            is_installed: None,
+            is_cached: None,
+            is_disabled: None,
+            package_hash: None,
+            installed_at: None,
+            name: String::new(),
+            version: String::new(),
+            description: String::new(),
+            native_depiction: None,
+            license: None,
+            homepage: None,
+            category: None,
+            icon: None,
+            platforms: Vec::new(),
+            dependencies: None,
+            source: None,
+            autobump: None,
+            scripts: None,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Dependency {
-    pub name: String,
+    pub name: Option<String>,
     pub version: Option<String>,
     pub is_build: Option<bool>,
     pub package_hash: Option<String>,

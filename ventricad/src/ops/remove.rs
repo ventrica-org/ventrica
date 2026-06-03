@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 
-use ventrica::PackageRecord;
+use ventrica::Package;
 use ventrica::error::{Error, Result};
+use ventrica::store::simple_store_name;
+use ventrica::store::simple_store_path;
 use ventrica::store::{db::Database, live};
 
 pub fn remove(names: &[String]) -> Result<()> {
@@ -11,7 +13,7 @@ pub fn remove(names: &[String]) -> Result<()> {
 
     let db = Database::open()?;
 
-    let mut resolved: Vec<PackageRecord> = Vec::new();
+    let mut resolved: Vec<Package> = Vec::new();
     for name in names {
         let pkg = db
             .find_package(name)?
@@ -23,27 +25,28 @@ pub fn remove(names: &[String]) -> Result<()> {
 
     let mut to_remove = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
+    // use simple_store_name instead of store_path to find packages
+
     for pkg in &resolved {
-        seen.insert(pkg.store_path.clone());
+        seen.insert(simple_store_name(&pkg.name, &pkg.version));
     }
 
     let mut frontier = resolved
         .iter()
-        .map(|pkg| pkg.store_path.clone())
+        .map(|pkg| simple_store_name(&pkg.name, &pkg.version))
         .collect::<Vec<_>>();
     while !frontier.is_empty() {
         let mut next_frontier = Vec::new();
         for candidate in &all_installed {
-            if seen.contains(&candidate.store_path) {
+            if seen.contains(&simple_store_name(&candidate.name, &candidate.version)) {
                 continue;
             }
-            if candidate
-                .run_dep_store_paths
-                .iter()
-                .any(|d| frontier.contains(d))
-            {
-                seen.insert(candidate.store_path.clone());
-                next_frontier.push(candidate.store_path.clone());
+            let candidate_deps = db.package_dependency_store_paths(&candidate.name, &candidate.version)?;
+            if candidate_deps.iter().any(|(name, version)| {
+                frontier.contains(&simple_store_path(name, version).display().to_string())
+            }) {
+                seen.insert(simple_store_name(&candidate.name, &candidate.version));
+                next_frontier.push(simple_store_name(&candidate.name, &candidate.version));
                 to_remove.push(candidate.clone());
             }
         }

@@ -1,11 +1,9 @@
 use std::path::Path;
 
 use rusqlite::{Connection, OptionalExtension, params};
-use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::schema::kdl::{Generation, Package, Repo};
-use crate::store::simple_store_name;
 
 const SCHEMA: &str = r#"
 PRAGMA journal_mode = WAL;
@@ -17,11 +15,9 @@ CREATE TABLE IF NOT EXISTS packages (
     version               TEXT    NOT NULL,
     description           TEXT    NOT NULL,
     category              TEXT    NOT NULL,
-    store_name            TEXT    NOT NULL,
-    store_path            TEXT    NOT NULL UNIQUE,
     installed_at          INTEGER NOT NULL,
     icon                  TEXT,
-    native_description    TEXT,
+    native_depiction      TEXT,
     run_dep_store_paths   TEXT    NOT NULL DEFAULT '[]'
 );
 
@@ -38,7 +34,7 @@ CREATE TABLE IF NOT EXISTS generation_packages (
     PRIMARY KEY (generation_id, package_id)
 );
 
--- Single-row table: current active generation (0 = none).
+-- Single: current active generation (0 = none).
 CREATE TABLE IF NOT EXISTS current_generation (
     singleton         INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
     generation_number INTEGER NOT NULL DEFAULT 0
@@ -53,52 +49,6 @@ CREATE TABLE IF NOT EXISTS repositories (
 );
 "#;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageRecord {
-    pub id: i64,
-    pub name: String,
-    pub version: String,
-    pub description: String,
-    pub category: String,
-    pub store_name: String,
-    pub store_path: String,
-    pub installed_at: i64,
-    pub icon: Option<String>,
-    pub native_description: Option<String>,
-    pub run_dep_store_paths: Vec<String>,
-}
-
-impl From<PackageRecord> for Package {
-    fn from(rec: PackageRecord) -> Self {
-        Self::from(&rec)
-    }
-}
-
-impl From<&PackageRecord> for Package {
-    fn from(rec: &PackageRecord) -> Self {
-        Self {
-            is_installed: Some(true),
-            is_cached: None,
-            is_disabled: None,
-            package_hash: Some(rec.store_name.clone()),
-            installed_at: Some(rec.installed_at.to_string()),
-            name: rec.name.clone(),
-            version: rec.version.clone(),
-            description: rec.description.clone(),
-            native_depiction: rec.native_description.clone(),
-            license: None,
-            homepage: None,
-            category: Some(rec.category.clone()),
-            icon: rec.icon.clone(),
-            platforms: Vec::new(),
-            dependencies: None,
-            source: None,
-            autobump: None,
-            scripts: None,
-        }
-    }
-}
-
 pub struct Database {
     conn: Connection,
 }
@@ -106,7 +56,7 @@ pub struct Database {
 impl Database {
     pub fn open() -> Result<Self> {
         let root = Path::new(crate::store::STORE_ROOT);
-        std::fs::create_dir_all(root).map_err(|e| Error::path(root, e.to_string()))?;
+        std::fs::create_dir_all(root)?;
         let db_path = root.join("ventrica.db");
         let conn = Connection::open(&db_path)?;
         conn.execute_batch(SCHEMA)?;
@@ -116,18 +66,19 @@ impl Database {
     pub fn insert_package(
         &self,
         package: &Package,
-        store_path: &str,
-        run_dep_store_paths: &[String],
+        run_dep_store_paths: &[(String, String)],
     ) -> Result<()> {
         let name = package.name.as_str();
         let version = package.version.as_str();
         let description = package.description.as_str();
         let category = package.category.as_deref().unwrap_or_default();
-        let store_name = simple_store_name(name, version);
         let icon = package.icon.as_deref();
-        let native_description = package.native_depiction.as_deref();
+        let native_depiction = package.native_depiction.as_deref();
 
-        if self.find_package_by_store_path(store_path)?.is_some() {
+        if self
+            .find_package_by_name_and_version(name, version)?
+            .is_some()
+        {
             return Err(Error::AlreadyInstalled {
                 name: name.into(),
                 version: version.into(),
@@ -137,9 +88,9 @@ impl Database {
         let deps_json = serde_json::to_string(run_dep_store_paths).unwrap_or_else(|_| "[]".into());
         let now = unix_now();
         self.conn.execute(
-            "INSERT INTO packages (name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![name, version, description, category, &store_name, store_path, now, icon, native_description, deps_json],
+            "INSERT INTO packages (name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![name, version, description, category, now, icon, native_depiction, deps_json],
         )?;
         Ok(())
     }
@@ -154,10 +105,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn find_package(&self, name: &str) -> Result<Option<PackageRecord>> {
+    pub fn find_package(&self, name: &str) -> Result<Option<Package>> {
         let row = self.conn
             .query_row(
-                "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
+                "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
                     FROM packages WHERE name = ?1 LIMIT 1",
                 params![name],
                 row_to_package,
@@ -166,12 +117,16 @@ impl Database {
         Ok(row)
     }
 
-    pub fn find_package_by_store_path(&self, store_path: &str) -> Result<Option<PackageRecord>> {
+    pub fn find_package_by_name_and_version(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<Option<Package>> {
         self.conn
             .query_row(
-                "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
-                 FROM packages WHERE store_path = ?1",
-                params![store_path],
+                "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
+                 FROM packages WHERE name = ?1 AND version = ?2",
+                params![name, version],
                 row_to_package,
             )
             .optional()
@@ -179,12 +134,12 @@ impl Database {
     }
 
     pub fn find_package_manifest(&self, name: &str) -> Result<Option<Package>> {
-        self.find_package(name).map(|pkg| pkg.map(Into::into))
+        self.find_package(name)
     }
 
-    pub fn list_packages(&self) -> Result<Vec<PackageRecord>> {
+    pub fn list_packages(&self) -> Result<Vec<Package>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, version, description, category, store_name, store_path, installed_at, icon, native_description, run_dep_store_paths \
+            "SELECT id, name, version, description, category, installed_at, icon, native_depiction, run_dep_store_paths \
              FROM packages ORDER BY name, version",
         )?;
         let rows = stmt
@@ -195,7 +150,25 @@ impl Database {
 
     pub fn list_packages_manifest(&self) -> Result<Vec<Package>> {
         self.list_packages()
-            .map(|rows| rows.into_iter().map(Into::into).collect())
+    }
+
+    pub fn package_dependency_store_paths(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<Vec<(String, String)>> {
+        self.conn
+            .query_row(
+                "SELECT run_dep_store_paths FROM packages WHERE name = ?1 AND version = ?2 LIMIT 1",
+                params![name, version],
+                |row| {
+                    let deps_json: String = row.get(0)?;
+                    Ok(serde_json::from_str(&deps_json).unwrap_or_default())
+                },
+            )
+            .optional()
+            .map(|opt| opt.unwrap_or_default())
+            .map_err(Into::into)
     }
 
     pub fn create_generation(
@@ -233,7 +206,7 @@ impl Database {
             number,
             created_at: now,
             description: description.map(ToOwned::to_owned),
-            current: false,
+            ..Default::default()
         })
     }
 
@@ -260,9 +233,9 @@ impl Database {
         Ok(rows)
     }
 
-    pub fn packages_in_generation(&self, generation_number: u32) -> Result<Vec<PackageRecord>> {
+    pub fn packages_in_generation(&self, generation_number: u32) -> Result<Vec<Package>> {
         let mut stmt = self.conn.prepare(
-            "SELECT p.id, p.name, p.version, p.description, p.category, p.store_name, p.store_path, p.installed_at, p.icon, p.native_description, p.run_dep_store_paths \
+            "SELECT p.id, p.name, p.version, p.description, p.category, p.installed_at, p.icon, p.native_depiction, p.run_dep_store_paths \
              FROM packages p \
              JOIN generation_packages gp ON gp.package_id = p.id \
              JOIN generations g ON g.id = gp.generation_id \
@@ -277,7 +250,6 @@ impl Database {
 
     pub fn packages_in_generation_manifest(&self, generation_number: u32) -> Result<Vec<Package>> {
         self.packages_in_generation(generation_number)
-            .map(|rows| rows.into_iter().map(Into::into).collect())
     }
 
     pub fn current_generation_number(&self) -> Result<u32> {
@@ -344,21 +316,19 @@ impl Database {
     }
 }
 
-fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<PackageRecord> {
-    let deps_json: String = row.get(10).unwrap_or_else(|_| "[]".to_owned());
-    let run_dep_store_paths: Vec<String> = serde_json::from_str(&deps_json).unwrap_or_default();
-    Ok(PackageRecord {
+fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<Package> {
+    Ok(Package {
         id: row.get(0)?,
         name: row.get(1)?,
         version: row.get(2)?,
         description: row.get(3)?,
         category: row.get(4)?,
-        store_name: row.get(5)?,
-        store_path: row.get(6)?,
-        installed_at: row.get(7)?,
-        icon: row.get(8)?,
-        native_description: row.get(9)?,
-        run_dep_store_paths,
+        installed_at: row.get(5)?,
+        icon: row.get(6)?,
+        native_depiction: row.get(7)?,
+        is_installed: Some(true),
+        dependencies: None,
+        ..Default::default()
     })
 }
 
@@ -368,7 +338,7 @@ fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<Generation> {
         number: row.get(1)?,
         created_at: row.get(2)?,
         description: row.get(3)?,
-        current: false,
+        ..Default::default()
     })
 }
 

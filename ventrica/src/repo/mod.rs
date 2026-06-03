@@ -30,7 +30,7 @@ pub fn run_dependencies(package: &Package) -> Vec<String> {
         .map(|deps| {
             deps.iter()
                 .filter(|d| !d.is_build.unwrap_or(false))
-                .map(|d| d.name.clone())
+                .filter_map(|d| d.name.clone())
                 .collect()
         })
         .unwrap_or_default()
