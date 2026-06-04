@@ -1,0 +1,23 @@
+is_disabled #false
+is_cached #true
+
+name        %s
+version     %s
+description %s
+license     %s
+homepage    %s
+category    %s
+platforms   %s %s
+
+dependencies {}
+
+source {
+    url     %s %s
+    sha256  %s
+}
+
+scripts {
+    build """
+        %s
+    """
+}
