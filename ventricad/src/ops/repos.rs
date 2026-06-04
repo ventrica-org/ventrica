@@ -1,5 +1,5 @@
+use ventrica::models::Package;
 use ventrica::repo::{fetch_manifest_cached, mark_package_installed, mark_package_not_installed};
-use ventrica::schema::kdl::Package;
 use ventrica::store::db::Database;
 
 pub fn remove_repo(url: &str) -> ventrica::Result<()> {

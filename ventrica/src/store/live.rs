@@ -2,8 +2,8 @@ use std::fs;
 use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
-use crate::Package;
 use crate::error::{Error, Result};
+use crate::models::Package;
 use crate::store::db::Database;
 use crate::store::{GENERATIONS_DIR, LIVE_PREFIX, link_tree, seal, simple_store_path};
 

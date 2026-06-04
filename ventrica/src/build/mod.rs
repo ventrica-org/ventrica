@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::error::{Error, Result};
-use crate::schema::kdl::{Package, Scripts};
+use crate::models::{Package, Scripts};
 use crate::store::{LIVE_PREFIX, atomic_move, seal, simple_store_path, unseal};
 
 use context::{BuildContext, build_env, chown_scratch};

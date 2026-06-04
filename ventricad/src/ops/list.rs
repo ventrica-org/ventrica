@@ -1,4 +1,4 @@
-use ventrica::schema::kdl::{Generation, Package, Repo};
+use ventrica::models::{Generation, Package, Repo};
 use ventrica::store::db::Database;
 
 pub fn list_packages() -> ventrica::Result<Vec<Package>> {

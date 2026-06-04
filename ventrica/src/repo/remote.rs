@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::build::download::download;
 use crate::error::{Error, Result};
-use crate::schema::kdl::Repo;
+use crate::models::Repo;
 use crate::store::{REPOS_DIR, sha256_file};
 
 use super::{MANIFEST_FILE, MANIFEST_HASH_FILE, decode_manifest};

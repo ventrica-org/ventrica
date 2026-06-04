@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::build::Builder;
 use crate::error::{Error, Result};
-use crate::schema::kdl::{Package, Repo, Source};
+use crate::models::{Package, Repo, Source};
 use crate::store::sha256_file;
 use crate::store::var;
 

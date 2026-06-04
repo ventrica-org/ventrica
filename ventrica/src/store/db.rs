@@ -3,7 +3,7 @@ use std::path::Path;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::error::{Error, Result};
-use crate::schema::kdl::{Generation, Package, Repo};
+use crate::models::{Generation, Package, Repo};
 
 const SCHEMA: &str = r#"
 PRAGMA journal_mode = WAL;

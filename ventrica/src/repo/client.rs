@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::build::download::download;
 use crate::error::{Error, Result};
-use crate::schema::kdl::Package;
+use crate::models::Package;
 use crate::store::var as var_fmt;
 use crate::store::{STORE_DIR, seal, sha256_file, simple_store_name};
 

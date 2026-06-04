@@ -5,9 +5,8 @@
 
 pub mod build;
 pub mod error;
+pub mod models;
 pub mod repo;
-pub mod schema;
 pub mod store;
 
 pub use error::{Error, Result};
-pub use schema::kdl::Package;

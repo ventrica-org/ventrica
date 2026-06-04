@@ -1,57 +1,6 @@
-use std::path::PathBuf;
-
-use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Generation {
-    pub id: i64,
-    pub number: u32,
-    pub created_at: i64,
-    pub description: Option<String>,
-    pub current: bool,
-    pub packages: Vec<Package>,
-}
-
-impl Default for Generation {
-    fn default() -> Self {
-        Self {
-            id: 0,
-            number: 0,
-            created_at: 0,
-            description: None,
-            current: false,
-            packages: Vec::new(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Repo {
-    pub id: Option<i64>,
-    pub url: Option<String>,
-    pub installed_at: Option<i64>,
-    pub name: String,
-    pub description: Option<String>,
-    pub icon: Option<String>,
-    pub homepage: Option<String>,
-    pub packages: Vec<Package>,
-}
-
-impl Default for Repo {
-    fn default() -> Self {
-        Self {
-            id: None,
-            url: None,
-            installed_at: None,
-            name: String::new(),
-            description: None,
-            icon: None,
-            homepage: None,
-            packages: Vec::new(),
-        }
-    }
-}
+use crate::Error;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Package {
@@ -131,7 +80,7 @@ pub struct Scripts {
 }
 
 impl Package {
-    pub fn from_path(path: impl Into<PathBuf>) -> Result<Self, Error> {
+    pub fn from_path(path: impl Into<std::path::PathBuf>) -> Result<Self, Error> {
         let content = std::fs::read_to_string(path.into())?;
         let config: Package = kdl::de::from_str(&content)?;
         Ok(config)

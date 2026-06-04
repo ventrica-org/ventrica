@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use ventrica::Package;
 use ventrica::error::{Error, Result};
+use ventrica::models::Package;
 use ventrica::store::simple_store_name;
 use ventrica::store::simple_store_path;
 use ventrica::store::{db::Database, live};
@@ -41,7 +41,8 @@ pub fn remove(names: &[String]) -> Result<()> {
             if seen.contains(&simple_store_name(&candidate.name, &candidate.version)) {
                 continue;
             }
-            let candidate_deps = db.package_dependency_store_paths(&candidate.name, &candidate.version)?;
+            let candidate_deps =
+                db.package_dependency_store_paths(&candidate.name, &candidate.version)?;
             if candidate_deps.iter().any(|(name, version)| {
                 frontier.contains(&simple_store_path(name, version).display().to_string())
             }) {

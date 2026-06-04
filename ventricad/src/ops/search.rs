@@ -1,5 +1,5 @@
+use ventrica::models::Package;
 use ventrica::repo::{mark_package_installed, mark_package_not_installed, search_repos};
-use ventrica::schema::kdl::Package;
 use ventrica::store::db::Database;
 
 pub fn search(query: &str) -> ventrica::Result<Vec<Package>> {

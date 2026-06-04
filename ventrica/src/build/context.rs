@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use std::os::unix::process::CommandExt as _;
 
 use crate::error::{Error, Result};
-use crate::schema::kdl::Scripts;
+use crate::models::Scripts;
 
 #[derive(Debug)]
 pub struct BuildContext<'a> {

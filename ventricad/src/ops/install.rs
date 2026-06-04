@@ -1,6 +1,6 @@
 use ventrica::error::{Error, Result};
+use ventrica::models::Package;
 use ventrica::repo::{dep_store_paths, find_in_repos, install_from_repo, run_dependencies};
-use ventrica::schema::kdl::Package;
 use ventrica::store::{db::Database, live};
 
 use super::deps::ensure_dep_installed;
