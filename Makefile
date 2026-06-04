@@ -1,6 +1,6 @@
 UNAME_S := $(shell uname -s)
 
-OUTDIR := _build
+OUTDIR := $(abspath _build)
 
 ARCH ?= universal
 WITH_GUI ?= 1
@@ -81,7 +81,9 @@ gui-build: xcframework
 		-scheme $(GUI_SCHEME) \
 		-configuration Release \
 		ARCHS="$(XCODE_ARCHS)" \
-		ONLY_ACTIVE_ARCH=NO
+		ONLY_ACTIVE_ARCH=NO \
+		DEPLOYMENT_LOCATION=YES \
+		DSTROOT=$(OUTDIR)
 
 package:
 	mkdir -p $(BIN_DIR) $(LIBEXEC_DIR) $(PLIST_DIR)
@@ -108,3 +110,4 @@ endif
 clean:
 	rm -rf $(OUTDIR)
 	rm -rf ventrica_ffi/_build/libs
+	rm -rf ventrica_ffi/_build/libVentrica.xcframework
