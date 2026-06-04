@@ -5,6 +5,7 @@ use std::process::{Command, Stdio};
 #[cfg(unix)]
 use std::os::unix::process::CommandExt as _;
 
+use crate::env::VENTRICA_LIVE_PATH;
 use crate::error::{Error, Result};
 use crate::models::Scripts;
 
@@ -150,13 +151,11 @@ fn chown_recursive(dir: &Path, uid: u32, gid: u32) {
 
 #[must_use]
 pub fn build_env(recipe_env: &HashMap<String, String>) -> HashMap<String, String> {
-    use crate::store::LIVE_PREFIX;
-
     let mut env: HashMap<String, String> = HashMap::new();
 
     env.insert(
         "PATH".into(),
-        format!("{LIVE_PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin"),
+        format!("{VENTRICA_LIVE_PATH}/bin:/usr/bin:/bin:/usr/sbin:/sbin"),
     );
 
     env.insert("CC".into(), "clang".into());
@@ -165,22 +164,25 @@ pub fn build_env(recipe_env: &HashMap<String, String>) -> HashMap<String, String
 
     env.insert(
         "ACLOCAL_PATH".into(),
-        format!("{LIVE_PREFIX}/share/aclocal"),
+        format!("{VENTRICA_LIVE_PATH}/share/aclocal"),
     );
 
-    env.insert("CPPFLAGS".into(), format!("-I{LIVE_PREFIX}/include"));
-    env.insert("CFLAGS".into(), format!("-I{LIVE_PREFIX}/include"));
-    env.insert("CXXFLAGS".into(), format!("-I{LIVE_PREFIX}/include"));
+    env.insert("CPPFLAGS".into(), format!("-I{VENTRICA_LIVE_PATH}/include"));
+    env.insert("CFLAGS".into(), format!("-I{VENTRICA_LIVE_PATH}/include"));
+    env.insert("CXXFLAGS".into(), format!("-I{VENTRICA_LIVE_PATH}/include"));
     env.insert(
         "PKG_CONFIG_PATH".into(),
-        format!("{LIVE_PREFIX}/lib/pkgconfig:{LIVE_PREFIX}/share/pkgconfig"),
+        format!("{VENTRICA_LIVE_PATH}/lib/pkgconfig:{VENTRICA_LIVE_PATH}/share/pkgconfig"),
     );
-    env.insert("LDFLAGS".into(), format!("-L{LIVE_PREFIX}/lib"));
+    env.insert("LDFLAGS".into(), format!("-L{VENTRICA_LIVE_PATH}/lib"));
 
     #[cfg(target_os = "macos")]
     {
         env.insert("MACOSX_DEPLOYMENT_TARGET".into(), "11.0".into());
-        env.insert("DYLD_LIBRARY_PATH".into(), format!("{LIVE_PREFIX}/lib"));
+        env.insert(
+            "DYLD_LIBRARY_PATH".into(),
+            format!("{VENTRICA_LIVE_PATH}/lib"),
+        );
     }
 
     // allows the recipe to override

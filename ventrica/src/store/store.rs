@@ -6,12 +6,6 @@ use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
 
-pub const STORE_ROOT: &str = "/ventrica";
-pub const STORE_DIR: &str = "/ventrica/store";
-pub const REPOS_DIR: &str = "/ventrica/repos";
-pub const GENERATIONS_DIR: &str = "/ventrica/generations";
-pub const LIVE_PREFIX: &str = "/ventrica/live";
-
 /// `<name>-<version>`.
 #[must_use]
 pub fn simple_store_name(name: &str, version: &str) -> String {
@@ -21,7 +15,7 @@ pub fn simple_store_name(name: &str, version: &str) -> String {
 /// `/ventrica/store/<name>-<version>`.
 #[must_use]
 pub fn simple_store_path(name: &str, version: &str) -> PathBuf {
-    Path::new(STORE_DIR).join(simple_store_name(name, version))
+    Path::new(crate::env::VENTRICA_STORE_PATH).join(simple_store_name(name, version))
 }
 
 /// strip write bits

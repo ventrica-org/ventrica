@@ -2,6 +2,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
+use crate::env::PREFIX;
 use crate::error::{Error, Result};
 use crate::models::{Generation, Package, Repo};
 
@@ -57,7 +58,7 @@ pub struct Database {
 
 impl Database {
     pub fn open() -> Result<Self> {
-        let root = Path::new(crate::store::STORE_ROOT);
+        let root = Path::new(PREFIX);
         std::fs::create_dir_all(root)?;
         let db_path = root.join("ventrica.db");
         let conn = Connection::open(&db_path)?;

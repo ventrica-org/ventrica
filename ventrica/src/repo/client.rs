@@ -3,10 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::build::download::download;
+use crate::env::VENTRICA_STORE_PATH;
 use crate::error::{Error, Result};
 use crate::models::Package;
 use crate::store::var as var_fmt;
-use crate::store::{STORE_DIR, seal, sha256_file, simple_store_name};
+use crate::store::{seal, sha256_file, simple_store_name};
 
 use super::remote::get_manifest;
 use super::run_dependencies;
@@ -120,7 +121,7 @@ pub fn check_updates(
 
 pub fn install_from_repo(base_url: &str, package: &Package) -> Result<PathBuf> {
     let store_name = simple_store_name(&package.name, &package.version);
-    let dest = Path::new(STORE_DIR).join(&store_name);
+    let dest = Path::new(VENTRICA_STORE_PATH).join(&store_name);
     if dest.exists() {
         log::info!("{} already in store - skipping download", package.name);
         return Ok(dest);

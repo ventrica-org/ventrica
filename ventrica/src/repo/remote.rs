@@ -2,9 +2,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::build::download::download;
+use crate::env::VENTRICA_REPOS_PATH;
 use crate::error::{Error, Result};
 use crate::models::Repo;
-use crate::store::{REPOS_DIR, sha256_file};
+use crate::store::sha256_file;
 
 use super::{MANIFEST_FILE, MANIFEST_HASH_FILE, decode_manifest};
 
@@ -141,7 +142,7 @@ pub(super) fn repo_cache_dir(base_url: &str) -> PathBuf {
     h.update(base_url.as_bytes());
     let hex = hex::encode(h.finalize());
 
-    Path::new(REPOS_DIR).join(format!("{slug}-{hex}"))
+    Path::new(VENTRICA_REPOS_PATH).join(format!("{slug}-{hex}"))
 }
 
 fn read_manifest(path: &Path) -> Result<Repo> {

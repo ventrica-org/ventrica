@@ -2,17 +2,18 @@ use std::fs;
 use std::os::unix::fs as unix_fs;
 use std::path::Path;
 
+use crate::env::{VENTRICA_GENERATIONS_PATH, VENTRICA_LIVE_PATH, VENTRICA_LIVE_TMP_PATH};
 use crate::error::{Error, Result};
 use crate::models::Package;
 use crate::store::db::Database;
-use crate::store::{GENERATIONS_DIR, LIVE_PREFIX, link_tree, seal, simple_store_path};
+use crate::store::{link_tree, seal, simple_store_path};
 
 /// activates live with packages
 pub fn activate(db: &Database, packages: &[Package], desc: Option<&str>) -> Result<u32> {
     let package_ids: Vec<i64> = packages.iter().filter_map(|p| p.id).collect();
     let g = db.create_generation(&package_ids, desc)?;
 
-    let gen_dir = Path::new(GENERATIONS_DIR).join(g.number.to_string());
+    let gen_dir = Path::new(VENTRICA_GENERATIONS_PATH).join(g.number.to_string());
 
     if gen_dir.exists() {
         crate::store::unseal(&gen_dir)?;
@@ -40,7 +41,7 @@ pub fn activate(db: &Database, packages: &[Package], desc: Option<&str>) -> Resu
 pub fn rollback(db: &Database, number: u32) -> Result<()> {
     db.get_generation(number)?;
 
-    let gen_dir = Path::new(GENERATIONS_DIR).join(number.to_string());
+    let gen_dir = Path::new(VENTRICA_GENERATIONS_PATH).join(number.to_string());
     if !gen_dir.exists() {
         return Err(Error::GenerationNotFound(number));
     }
@@ -53,8 +54,8 @@ pub fn rollback(db: &Database, number: u32) -> Result<()> {
 }
 
 fn swap_live(new_gen: &Path) -> Result<()> {
-    let live = Path::new(LIVE_PREFIX);
-    let live_tmp = Path::new("/ventrica/live.new");
+    let live = Path::new(VENTRICA_LIVE_PATH);
+    let live_tmp = Path::new(VENTRICA_LIVE_TMP_PATH);
 
     if live_tmp.is_symlink() || live_tmp.exists() {
         fs::remove_file(live_tmp)?;

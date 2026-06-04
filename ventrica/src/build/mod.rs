@@ -9,9 +9,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use crate::env::{VENTRICA_LIVE_PATH, VENTRICA_STORE_PATH};
 use crate::error::{Error, Result};
 use crate::models::{Package, Scripts};
-use crate::store::{LIVE_PREFIX, atomic_move, seal, simple_store_path, unseal};
+use crate::store::{atomic_move, seal, simple_store_path, unseal};
 
 use context::{BuildContext, build_env, chown_scratch};
 
@@ -112,8 +113,7 @@ impl<'a> Builder<'a> {
         }
         let _guard = ScratchGuard(scratch.clone());
 
-        use crate::store::STORE_DIR;
-        fs::create_dir_all(STORE_DIR)?;
+        fs::create_dir_all(VENTRICA_STORE_PATH)?;
 
         log::info!("starting build pipeline in scratch {}", scratch.display());
 
@@ -144,7 +144,7 @@ impl<'a> Builder<'a> {
                     env: &env,
                     spec: build_spec,
                     name: &pkg.name,
-                    prefix: LIVE_PREFIX,
+                    prefix: VENTRICA_LIVE_PATH,
                     sandboxed,
                     build_user: self.build_user,
                 };
@@ -155,9 +155,9 @@ impl<'a> Builder<'a> {
 
         // Build tools install into DESTDIR under the live prefix, e.g.
         // dest_dir/ventrica/live/bin/...  Move that subtree into the store entry.
-        let live_rel = Path::new(LIVE_PREFIX)
+        let live_rel = Path::new(VENTRICA_LIVE_PATH)
             .strip_prefix("/")
-            .unwrap_or(Path::new(LIVE_PREFIX));
+            .unwrap_or(Path::new(VENTRICA_LIVE_PATH));
         let staged_prefix = dest_dir.join(live_rel);
 
         let promote_from = if staged_prefix.exists() {

@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use ventrica::store::{GENERATIONS_DIR, STORE_DIR, db::Database, simple_store_path, unseal};
+use ventrica::{
+    env::{VENTRICA_GENERATIONS_PATH, VENTRICA_STORE_PATH},
+    store::{db::Database, simple_store_path, unseal},
+};
 
 pub fn gc() -> ventrica::Result<()> {
     let db = Database::open()?;
@@ -11,7 +14,7 @@ pub fn gc() -> ventrica::Result<()> {
         if generation.number == current {
             continue;
         }
-        let gen_dir = Path::new(GENERATIONS_DIR).join(generation.number.to_string());
+        let gen_dir = Path::new(VENTRICA_GENERATIONS_PATH).join(generation.number.to_string());
         if gen_dir.exists() {
             unseal(&gen_dir)?;
             std::fs::remove_dir_all(&gen_dir)?;
@@ -31,12 +34,14 @@ pub fn gc() -> ventrica::Result<()> {
             referenced.extend(
                 db.package_dependency_store_paths(&pkg.name, &pkg.version)?
                     .into_iter()
-                    .map(|(name, version)| simple_store_path(&name, &version).display().to_string()),
+                    .map(|(name, version)| {
+                        simple_store_path(&name, &version).display().to_string()
+                    }),
             );
         }
     }
 
-    let packages_dir = std::path::Path::new(STORE_DIR);
+    let packages_dir = std::path::Path::new(VENTRICA_STORE_PATH);
     if !packages_dir.exists() {
         return Ok(());
     }

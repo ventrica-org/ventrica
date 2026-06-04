@@ -4,6 +4,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod build;
+pub mod env;
 pub mod error;
 pub mod models;
 pub mod repo;
