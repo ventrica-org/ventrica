@@ -1,5 +1,5 @@
-use ventrica::error::{Error, Result};
 use ventrica::store::{db::Database, live};
+use ventrica::{Error, Result};
 
 pub fn rollback(target: Option<u32>) -> Result<()> {
     let db = Database::open()?;

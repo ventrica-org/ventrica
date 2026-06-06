@@ -1,4 +1,4 @@
-use ventrica::error::Result;
+use ventrica::Result;
 use ventrica::repo::{
     check_updates, dep_store_paths, find_in_repos, install_from_repo, run_dependencies,
 };

@@ -5,6 +5,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use crate::env::PREFIX;
 use crate::error::{Error, Result};
 use crate::models::{Generation, Package, Repo};
+use crate::utils::unix::unix_now;
 
 const SCHEMA: &str = r#"
 PRAGMA journal_mode = WAL;
@@ -345,12 +346,4 @@ fn row_to_generation(row: &rusqlite::Row<'_>) -> rusqlite::Result<Generation> {
         description: row.get(3)?,
         ..Default::default()
     })
-}
-
-fn unix_now() -> i64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
 }

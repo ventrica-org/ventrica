@@ -5,9 +5,11 @@
 
 pub mod build;
 pub mod env;
-pub mod error;
+mod error;
 pub mod models;
+pub mod platform;
 pub mod repo;
 pub mod store;
+pub mod utils;
 
 pub use error::{Error, Result};

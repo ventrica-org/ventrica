@@ -3,7 +3,7 @@ use const_env::env_item;
 
 #[cfg(target_os = "macos")]
 #[env_item]
-pub const PREFIX: &'static str = "/ventrica";
+pub const PREFIX: &'static str = "/opt/ventrica";
 #[cfg(target_os = "linux")]
 #[env_item]
 pub const PREFIX: &'static str = "/ventrica";

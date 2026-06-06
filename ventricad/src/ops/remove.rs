@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use ventrica::error::{Error, Result};
 use ventrica::models::Package;
 use ventrica::store::simple_store_name;
 use ventrica::store::simple_store_path;
 use ventrica::store::{db::Database, live};
+use ventrica::{Error, Result};
 
 pub fn remove(names: &[String]) -> Result<()> {
     if names.is_empty() {
