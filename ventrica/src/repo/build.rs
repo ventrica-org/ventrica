@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 use crate::build::Builder;
 use crate::error::{Error, Result};
@@ -78,32 +79,29 @@ fn repo_from_dir(repo_dir: &Path) -> Result<Repo> {
 
 pub fn scan_packages(packages_dir: &Path) -> Result<Vec<(PathBuf, Package)>> {
     let mut out = Vec::new();
-    scan_dir(packages_dir, &mut out)?;
-    Ok(out)
-}
+    if !packages_dir.exists() {
+        return Ok(out);
+    }
 
-fn scan_dir(dir: &Path, out: &mut Vec<(PathBuf, Package)>) -> Result<()> {
-    let rd = match fs::read_dir(dir) {
-        Ok(rd) => rd,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(e) => return Err(e.into()),
-    };
-
-    let mut entries: Vec<_> = rd.collect::<std::io::Result<_>>()?;
-    entries.sort_by_key(|e| e.file_name());
-
-    for entry in entries {
+    for entry in WalkDir::new(packages_dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+    {
         let path = entry.path();
-        if path.is_dir() {
-            scan_dir(&path, out)?;
-        } else if path.extension().is_some_and(|e| e == "kdl") {
-            match Package::from_path(&path) {
-                Ok(pkg) => out.push((path, pkg)),
-                Err(e) => log::warn!("skipping {} - {e}", path.display()),
-            }
+        if !path.extension().is_some_and(|e| e == "kdl") {
+            continue;
+        }
+
+        match Package::from_path(path.to_path_buf()) {
+            Ok(pkg) => out.push((path.to_path_buf(), pkg)),
+            Err(e) => log::warn!("skipping {} - {e}", path.display()),
         }
     }
-    Ok(())
+
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(out)
 }
 
 pub fn topo_sort(packages: Vec<(PathBuf, Package)>) -> Result<Vec<(PathBuf, Package)>> {
@@ -161,7 +159,7 @@ pub fn topo_sort(packages: Vec<(PathBuf, Package)>) -> Result<Vec<(PathBuf, Pack
 }
 
 fn write_manifest(cache_dir: &Path, repo: &mut Repo, packages: &[Package]) -> Result<()> {
-    repo.packages = packages.to_vec();
+    repo.packages = Some(packages.to_vec());
 
     let bytes = encode_manifest(&repo)?;
 

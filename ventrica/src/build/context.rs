@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use walkdir::WalkDir;
 
 #[cfg(unix)]
 use std::os::unix::process::CommandExt as _;
@@ -121,31 +122,18 @@ fn drop_privileges(cmd: &mut Command, build_user: Option<(u32, u32)>) {
 #[allow(unsafe_code)]
 pub fn chown_scratch(dir: &Path, build_user: Option<(u32, u32)>) {
     let Some((uid, gid)) = build_user else { return };
-    chown_recursive(dir, uid, gid);
-}
-
-#[cfg(unix)]
-#[allow(unsafe_code)]
-fn chown_recursive(dir: &Path, uid: u32, gid: u32) {
     use std::os::unix::ffi::OsStrExt;
 
-    let Ok(cstr) = std::ffi::CString::new(dir.as_os_str().as_bytes()) else {
-        return;
-    };
-    unsafe { libc::lchown(cstr.as_ptr(), uid, gid) };
-
-    let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in rd.flatten() {
+    for entry in WalkDir::new(dir)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         let p = entry.path();
         let Ok(cstr) = std::ffi::CString::new(p.as_os_str().as_bytes()) else {
             continue;
         };
         unsafe { libc::lchown(cstr.as_ptr(), uid, gid) };
-        if p.is_dir() && !p.is_symlink() {
-            chown_recursive(&p, uid, gid);
-        }
     }
 }
 

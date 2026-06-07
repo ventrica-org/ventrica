@@ -7,7 +7,8 @@ pub use client::{check_updates, dep_store_paths, find_in_repos, install_from_rep
 pub use remote::{fetch_manifest, fetch_manifest_cached, get_manifest, refresh_manifest_cache};
 
 use crate::error::{Error, Result};
-use crate::models::{Package, Repo};
+use crate::models::Package;
+use crate::models::Repo;
 
 pub const MANIFEST_FILE: &str = "manifest.msgpack";
 pub const MANIFEST_HASH_FILE: &str = "manifest.msgpack.sha256";

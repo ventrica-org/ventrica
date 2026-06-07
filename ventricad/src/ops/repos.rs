@@ -14,7 +14,9 @@ pub fn list_repo_packages(url: &str) -> ventrica::Result<Vec<Package>> {
     let installed = db.list_packages_manifest()?;
     let mut manifest = fetch_manifest_cached(url)?;
 
-    for package in &mut manifest.packages {
+    let mut packages = manifest.packages.take().unwrap_or_default();
+
+    for package in &mut packages {
         if installed.iter().any(|p| p.name == package.name) {
             mark_package_installed(package);
         } else {
@@ -22,5 +24,5 @@ pub fn list_repo_packages(url: &str) -> ventrica::Result<Vec<Package>> {
         }
     }
 
-    Ok(manifest.packages)
+    Ok(packages)
 }

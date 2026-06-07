@@ -51,6 +51,7 @@ pub fn find_in_repos(
         let name_lower = package_name.to_lowercase();
         if let Some(entry) = manifest
             .packages
+            .unwrap_or_default()
             .into_iter()
             .find(|p| p.name.to_lowercase() == name_lower)
         {
@@ -71,7 +72,7 @@ pub fn search_repos(query: &str, repo_urls: &[String]) -> Result<Vec<Package>> {
             }
         };
         let q = query.to_lowercase();
-        for package in manifest.packages {
+        for package in manifest.packages.unwrap_or_default() {
             if package.name.to_lowercase().contains(&q)
                 || package.description.to_lowercase().contains(&q)
             {
@@ -102,7 +103,7 @@ pub fn check_updates(
             }
         };
 
-        for package in manifest.packages {
+        for package in manifest.packages.unwrap_or_default() {
             let name = &package.name;
             if resolved.contains(name.as_str()) {
                 continue;

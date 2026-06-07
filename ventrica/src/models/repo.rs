@@ -10,7 +10,7 @@ pub struct Repo {
     pub description: Option<String>,
     pub icon: Option<String>,
     pub homepage: Option<String>,
-    pub packages: Vec<Package>,
+    pub packages: Option<Vec<Package>>,
 }
 
 impl Default for Repo {
@@ -23,7 +23,7 @@ impl Default for Repo {
             description: None,
             icon: None,
             homepage: None,
-            packages: Vec::new(),
+            packages: None,
         }
     }
 }
