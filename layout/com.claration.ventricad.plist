@@ -8,7 +8,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/ventrica/live/usr/local/libexec/ventricad</string>
+        <string>/ventrica/usr/libexec/ventricad</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -19,11 +19,5 @@
         <key>SuccessfulExit</key>
         <false/>
     </dict>
-
-    <key>StandardOutPath</key>
-    <string>/var/log/ventricad.log</string>
-
-    <key>StandardErrorPath</key>
-    <string>/var/log/ventricad.err</string>
 </dict>
 </plist>

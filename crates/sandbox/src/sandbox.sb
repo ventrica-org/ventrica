@@ -1,0 +1,51 @@
+(version 1)
+
+; ============================================================
+; Parameters
+; ============================================================
+
+(define sbx-path "SANDBOX_PATH")
+(define ventrica-prefix "VENTRICA_PREFIX")
+(define ventrica-toolchain "VENTRICA_TOOLCHAIN")
+(define network-inbound-param "NETWORK_INBOUND")
+(define network-outbound-param "NETWORK_OUTBOUND")
+
+; ============================================================
+; Default policy
+; ============================================================
+
+(allow default)
+
+; ============================================================
+; Ventrica sandbox/build directory
+; ============================================================
+
+(if (string? (param sbx-path))
+    (allow file-read* file-write*
+      (subpath (param sbx-path))))
+
+; ============================================================
+; Ventrica toolchain
+; ============================================================
+
+(if (string? (param ventrica-toolchain))
+    (allow file-read* file-map-executable
+      (subpath (param ventrica-toolchain))))
+
+; ============================================================
+; Ventrica installation prefix
+; ============================================================
+
+(if (string? (param ventrica-prefix))
+    (allow file-read*
+      (subpath (param ventrica-prefix))))
+
+; ============================================================
+; Networking
+; ============================================================
+
+(if (string=? (param network-inbound-param) "TRUE")
+    (allow network-inbound))
+
+(if (string=? (param network-outbound-param) "TRUE")
+    (allow network-outbound))

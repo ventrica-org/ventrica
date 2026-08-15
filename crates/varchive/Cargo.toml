@@ -1,0 +1,11 @@
+[package]
+name = "varchive"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+rmp-serde = "1.3"

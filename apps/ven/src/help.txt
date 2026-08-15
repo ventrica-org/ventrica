@@ -1,0 +1,18 @@
+{about}
+
+        _-e_n -t_rº i_c-a º
+    .(V
+   )    ____   |~~~~~~~~~~~~|
+  Y_,___|[]|   | [][][][][] |
+ /|_|_|_|PU|_,_|____________|
+//oo---OO=OO     OOO    OOO
+
+{usage}
+
+{options}
+
+Commands:
+
+{subcommands}{after-help}
+
+Authors:  {author}

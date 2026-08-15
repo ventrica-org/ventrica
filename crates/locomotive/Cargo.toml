@@ -1,0 +1,47 @@
+[package]
+name = "locomotive"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["builder"]
+builder = [
+    "dep:sandbox",
+    "dep:flate2",
+    "dep:tar",
+    "dep:bzip2",
+    "dep:lzma-rust2",
+]
+
+[dependencies]
+varchive = { path = "../varchive" }
+sandbox = { path = "../sandbox", optional = true }
+# Basic
+log.workspace = true
+miette.workspace = true
+thiserror.workspace = true
+libc.workspace = true
+const_env.workspace = true
+concat_const.workspace = true
+# Serialization
+serde.workspace = true
+kdl.workspace = true
+bincode-next.workspace = true
+# Database
+rusqlite.workspace = true
+# Cryptography
+sha2.workspace = true
+hex.workspace = true
+# Networking
+reqwest.workspace = true
+# Decompression
+flate2 = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+bzip2 = { workspace = true, optional = true }
+lzma-rust2 = { workspace = true, optional = true }
+
+[dev-dependencies]
+miette = { version = "7.6.0", features = ["fancy"] }

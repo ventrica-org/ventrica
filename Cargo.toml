@@ -1,14 +1,27 @@
 [workspace]
 resolver = "3"
-members = ["ventrica", "ventrica_cli", "ventrica_ffi", "ventricad"]
+members = [
+    "apps/ffi",
+    "apps/ven",
+    "apps/ventricad",
+    "crates/locomotive",
+    "crates/sandbox",
+    "crates/varchive",
+]
 
 [workspace.package]
 edition = "2024"
 version = "0.0.1"
+# Contributors are free to have their names added here on
+# first contributions if considered meaningful enough, one
+# lines wont be enough!
 authors = ["C <claration@riseup.net>"]
+# License is still be considered, could stay as GPLv3 or
+# use something similar.
 license = "GPLv3"
-repository = "https://github.com/claration/Ventrica"
+repository = "https://github.com/claration/ventrica"
 
+# Release profile optimizes for GIGA size decreases.
 [profile.release]
 codegen-units = 1
 debug = "full"
@@ -19,9 +32,33 @@ split-debuginfo = "packed"
 strip = true
 incremental = false
 
+# All dependencies are shared across the workspace.
 [workspace.dependencies]
+# Basic
 log = "0.4"
-walkdir = "2.5"
+miette = "7.6.0"
+thiserror = "2.0"
 libc = "0.2"
-serde_json = "1.0"
+const_env = "0.1"
+concat_const = "0.2.0"
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
+kdl = "6.6.0"
+bincode-next = { version = "3.1.1", features = ["serde"] }
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+# Cryptography
+sha2 = "0.11"
+hex = "0.4"
+# Networking
+reqwest = { version = "0.13.4", features = ["blocking"] }
+# Decompression
+flate2 = "1.1"
+tar = "0.4"
+bzip2 = "0.6"
+lzma-rust2 = { version = "0.20", default-features = false, features = [
+    "std",
+    "xz",
+    "lzip",
+    "optimization",
+] }

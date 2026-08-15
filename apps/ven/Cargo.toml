@@ -1,0 +1,13 @@
+[package]
+name = "ven2"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# ventricad2 = { path = "../ventricad" }
+locomotive = { path = "../../crates/locomotive" }
+libc.workspace = true
+clap = { version = "4.6", features = ["derive", "env"] }

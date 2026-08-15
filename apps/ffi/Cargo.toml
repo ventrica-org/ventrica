@@ -1,0 +1,10 @@
+[package]
+name = "ffi"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ventricad2 = { path = "../ventricad" }
